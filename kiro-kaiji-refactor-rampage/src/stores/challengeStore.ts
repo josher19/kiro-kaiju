@@ -1,0 +1,153 @@
+/**
+ * Challenge Store
+ * 
+ * Pinia store for managing challenge configuration, generation,
+ * and current challenge state
+ */
+
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { 
+  type ChallengeConfig, 
+  type Challenge, 
+  ProgrammingLanguage, 
+  Framework, 
+  ChallengeCategory, 
+  DifficultyLevel 
+} from '@/types';
+
+export const useChallengeStore = defineStore('challenge', () => {
+  // State
+  const currentConfig = ref<Partial<ChallengeConfig>>({});
+  const currentChallenge = ref<Challenge | null>(null);
+  const isGenerating = ref(false);
+  const generationError = ref<string | null>(null);
+
+  // Framework mappings for dynamic filtering
+  const frameworkMappings: Record<ProgrammingLanguage, Framework[]> = {
+    [ProgrammingLanguage.JAVASCRIPT]: [
+      Framework.VUE,
+      Framework.REACT,
+      Framework.ANGULAR,
+      Framework.SVELTE,
+      Framework.NODE,
+      Framework.EXPRESS
+    ],
+    [ProgrammingLanguage.TYPESCRIPT]: [
+      Framework.VUE,
+      Framework.REACT,
+      Framework.ANGULAR,
+      Framework.SVELTE,
+      Framework.NODE,
+      Framework.EXPRESS
+    ],
+    [ProgrammingLanguage.PYTHON]: [
+      Framework.DJANGO,
+      Framework.FLASK,
+      Framework.FASTAPI
+    ],
+    [ProgrammingLanguage.JAVA]: [
+      Framework.SPRING,
+      Framework.SPRING_BOOT
+    ],
+    [ProgrammingLanguage.CSHARP]: [
+      Framework.DOTNET,
+      Framework.ASP_NET
+    ],
+    [ProgrammingLanguage.CPP]: [],
+    [ProgrammingLanguage.GO]: [],
+    [ProgrammingLanguage.RUST]: []
+  };
+
+  // Computed
+  const availableFrameworks = computed(() => {
+    if (!currentConfig.value.language) return [];
+    return frameworkMappings[currentConfig.value.language] || [];
+  });
+
+  const isConfigValid = computed(() => {
+    return !!(
+      currentConfig.value.language &&
+      currentConfig.value.category &&
+      currentConfig.value.difficulty
+    );
+  });
+
+  const canGenerate = computed(() => {
+    return isConfigValid.value && !isGenerating.value;
+  });
+
+  // Actions
+  const updateLanguage = (language: ProgrammingLanguage) => {
+    currentConfig.value.language = language;
+    // Clear framework if it's not available for the new language
+    if (currentConfig.value.framework && 
+        !availableFrameworks.value.includes(currentConfig.value.framework)) {
+      currentConfig.value.framework = undefined;
+    }
+  };
+
+  const updateFramework = (framework: Framework | undefined) => {
+    currentConfig.value.framework = framework;
+  };
+
+  const updateCategory = (category: ChallengeCategory) => {
+    currentConfig.value.category = category;
+  };
+
+  const updateDifficulty = (difficulty: DifficultyLevel) => {
+    currentConfig.value.difficulty = difficulty;
+  };
+
+  const resetConfig = () => {
+    currentConfig.value = {};
+    generationError.value = null;
+  };
+
+  const generateChallenge = async () => {
+    if (!isConfigValid.value) {
+      generationError.value = 'Please complete all required fields';
+      return;
+    }
+
+    isGenerating.value = true;
+    generationError.value = null;
+
+    try {
+      // TODO: Implement actual challenge generation service call
+      // For now, simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock challenge generation - will be replaced with actual service
+      console.log('Generating challenge with config:', currentConfig.value);
+      
+      // Reset after successful generation
+      // currentConfig.value = {};
+    } catch (error) {
+      generationError.value = error instanceof Error ? error.message : 'Failed to generate challenge';
+    } finally {
+      isGenerating.value = false;
+    }
+  };
+
+  return {
+    // State
+    currentConfig,
+    currentChallenge,
+    isGenerating,
+    generationError,
+    
+    // Computed
+    availableFrameworks,
+    isConfigValid,
+    canGenerate,
+    
+    // Actions
+    updateLanguage,
+    updateFramework,
+    updateCategory,
+    updateDifficulty,
+    resetConfig,
+    generateChallenge
+  };
+});
