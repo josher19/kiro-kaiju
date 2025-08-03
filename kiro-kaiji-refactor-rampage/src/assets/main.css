@@ -1,0 +1,47 @@
+@import './base.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Kaiju-themed custom styles */
+body {
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+.kaiju-button {
+  background-color: #FF6B35;
+  color: white;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.kaiju-button:hover {
+  background-color: rgba(255, 107, 53, 0.9);
+}
+
+.kaiju-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 1.5rem;
+}
+
+.kaiju-input {
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.kaiju-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #FF6B35;
+  border-color: transparent;
+}
+
+#app {
+  min-height: 100vh;
+}
