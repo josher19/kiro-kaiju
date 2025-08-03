@@ -279,11 +279,9 @@ const setupMobileTouchHandlers = () => {
   if (!editor || !editorContainer.value) return
 
   let touchStartTime = 0
-  let touchStartPos = { x: 0, y: 0 }
 
-  editorContainer.value.addEventListener('touchstart', (e) => {
+  editorContainer.value.addEventListener('touchstart', () => {
     touchStartTime = Date.now()
-    touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   })
 
   editorContainer.value.addEventListener('touchend', (e) => {
