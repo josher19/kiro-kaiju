@@ -84,27 +84,35 @@ export class KaijuEngine {
     this.initializeMonsters();
   }
 
-  private initializeMonsters(): void {
-    // Import and register all Kaiju monsters
-    import('./monsters/HydraBug').then(({ HydraBug }) => {
+  private async initializeMonsters(): Promise<void> {
+    try {
+      // Import and register all Kaiju monsters
+      const { HydraBug } = await import('./monsters/HydraBug');
       this.registerMonster(new HydraBug());
-    });
-    
-    import('./monsters/Complexasaur').then(({ Complexasaur }) => {
+      
+      const { Complexasaur } = await import('./monsters/Complexasaur');
       this.registerMonster(new Complexasaur());
-    });
-    
-    import('./monsters/Duplicatron').then(({ Duplicatron }) => {
+      
+      const { Duplicatron } = await import('./monsters/Duplicatron');
       this.registerMonster(new Duplicatron());
-    });
-    
-    import('./monsters/Spaghettizilla').then(({ Spaghettizilla }) => {
+      
+      const { Spaghettizilla } = await import('./monsters/Spaghettizilla');
       this.registerMonster(new Spaghettizilla());
-    });
-    
-    import('./monsters/Memoryleak-odactyl').then(({ MemoryleakOdactyl }) => {
+      
+      const { MemoryleakOdactyl } = await import('./monsters/Memoryleak-odactyl');
       this.registerMonster(new MemoryleakOdactyl());
-    });
+    } catch (error) {
+      console.warn('Failed to load some Kaiju monsters:', error);
+    }
+  }
+
+  /**
+   * Ensure all monsters are loaded (for testing)
+   */
+  async ensureMonstersLoaded(): Promise<void> {
+    if (this.monsters.size === 0) {
+      await this.initializeMonsters();
+    }
   }
 
   /**

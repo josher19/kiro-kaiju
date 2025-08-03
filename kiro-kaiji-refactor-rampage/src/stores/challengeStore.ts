@@ -114,17 +114,20 @@ export const useChallengeStore = defineStore('challenge', () => {
     generationError.value = null;
 
     try {
-      // TODO: Implement actual challenge generation service call
-      // For now, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Import challenge service dynamically to avoid circular dependencies
+      const { challengeService } = await import('@/services/challengeService');
       
-      // Mock challenge generation - will be replaced with actual service
-      console.log('Generating challenge with config:', currentConfig.value);
+      const response = await challengeService.generateChallenge({
+        config: currentConfig.value as ChallengeConfig
+      });
       
-      // Reset after successful generation
+      currentChallenge.value = response.challenge;
+      
+      // Reset config after successful generation
       // currentConfig.value = {};
     } catch (error) {
       generationError.value = error instanceof Error ? error.message : 'Failed to generate challenge';
+      console.error('Challenge generation error:', error);
     } finally {
       isGenerating.value = false;
     }
