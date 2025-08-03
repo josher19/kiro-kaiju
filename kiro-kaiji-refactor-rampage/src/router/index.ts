@@ -17,6 +17,11 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
+    {
+      path: '/code-editor-test',
+      name: 'code-editor-test',
+      component: () => import('../views/CodeEditorTestView.vue'),
+    },
   ],
 })
 
