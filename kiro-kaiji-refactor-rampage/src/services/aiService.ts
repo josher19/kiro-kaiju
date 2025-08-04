@@ -8,10 +8,12 @@
 import type { 
   AIChatMessage, 
   AIChatRequest, 
-  AIChatResponse, 
-  ApiError 
+  AIChatResponse
 } from '@/types/api';
 import type { ChallengeContext } from '@/types/challenge';
+import { errorHandler, handleAsyncError } from '@/utils/errorHandler';
+import { networkService } from './networkService';
+import { offlineStorageService } from './offlineStorageService';
 
 export interface AIServiceConfig {
   mode: 'local' | 'cloud';
@@ -36,9 +38,21 @@ export class AIService {
     challengeContext: ChallengeContext,
     userId?: string
   ): Promise<AIChatResponse> {
-    try {
+    return handleAsyncError(async () => {
       const conversationId = this.getConversationId(challengeContext.challenge.id, userId);
-      const history = this.getConversationHistory(conversationId);
+      
+      // Load conversation history from cache if available
+      let history = this.getConversationHistory(conversationId);
+      if (history.length === 0) {
+        const cachedHistory = offlineStorageService.getCachedChatHistory(
+          challengeContext.challenge.id, 
+          userId
+        );
+        if (cachedHistory.length > 0) {
+          this.conversationHistory.set(conversationId, cachedHistory);
+          history = cachedHistory;
+        }
+      }
 
       const userMessage: AIChatMessage = {
         id: this.generateMessageId(),
@@ -64,27 +78,51 @@ export class AIService {
 
       let response: AIChatMessage;
 
-      if (this.config.mode === 'local') {
-        response = await this.sendToKiroAI(request, challengeContext);
+      // Check network status for cloud mode
+      if (this.config.mode === 'cloud' && !networkService.isOnline.value) {
+        // Provide offline fallback response
+        response = this.generateOfflineFallbackResponse(request, challengeContext);
       } else {
-        response = await this.sendToOpenRouter(request, challengeContext);
+        try {
+          if (this.config.mode === 'local') {
+            response = await this.sendToKiroAI(request, challengeContext);
+          } else {
+            response = await this.sendToOpenRouter(request, challengeContext);
+          }
+        } catch (error) {
+          // If network request fails, provide fallback response
+          if (this.isNetworkError(error)) {
+            response = this.generateOfflineFallbackResponse(request, challengeContext);
+          } else {
+            throw error;
+          }
+        }
       }
 
       // Add AI response to history
       this.addMessageToHistory(conversationId, response);
+
+      // Cache the updated conversation history
+      const updatedHistory = this.getConversationHistory(conversationId);
+      await offlineStorageService.cacheChatHistory(
+        challengeContext.challenge.id,
+        updatedHistory,
+        userId
+      );
 
       return {
         success: true,
         message: response
       };
 
-    } catch (error) {
-      console.error('AI Service Error:', error);
-      return {
-        success: false,
-        error: this.formatError(error)
-      };
-    }
+    }, {
+      context: 'ai_service_send_message',
+      challengeId: challengeContext.challenge.id,
+      userId
+    }, {
+      maxRetries: 2,
+      retryDelay: 1000
+    });
   }
 
   /**
@@ -357,6 +395,107 @@ Always provide concrete, implementable advice rather than general guidance. Refe
     }
     
     this.conversationHistory.set(conversationId, history);
+  }
+
+  /**
+   * Generate offline fallback response when network is unavailable
+   */
+  private generateOfflineFallbackResponse(
+    request: AIChatRequest,
+    challengeContext: ChallengeContext
+  ): AIChatMessage {
+    const { challenge } = challengeContext;
+    
+    const content = `🔌 **Offline Mode** - I'm currently working offline, but I can still help!
+
+**${challenge.kaiju.name} Challenge Analysis:**
+${challenge.kaiju.description}
+
+**Based on your message:** "${request.message}"
+
+Here are some offline suggestions:
+
+${this.generateOfflineAdvice(request.message, challenge)}
+
+💡 **Tip:** Your conversation will sync when you're back online!`;
+
+    return {
+      id: this.generateMessageId(),
+      role: 'assistant',
+      content,
+      timestamp: new Date(),
+      context: {
+        challengeId: request.challengeId,
+        currentCode: request.currentCode
+      }
+    };
+  }
+
+  /**
+   * Generate context-aware offline advice
+   */
+  private generateOfflineAdvice(message: string, challenge: any): string {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('refactor') || lowerMessage.includes('improve')) {
+      return `**Refactoring Strategy for ${challenge.kaiju.name}:**
+• Identify the specific anti-pattern this Kaiju represents
+• Break down complex functions into smaller, focused methods
+• Look for repeated code patterns that can be extracted
+• Improve naming conventions for better readability
+• Add proper error handling and validation`;
+    }
+    
+    if (lowerMessage.includes('test') || lowerMessage.includes('unit')) {
+      return `**Testing Approach:**
+• Start with happy path test cases
+• Add edge case and error condition tests
+• Test each function in isolation
+• Verify all requirements are covered
+• Use descriptive test names that explain the scenario`;
+    }
+    
+    if (lowerMessage.includes('bug') || lowerMessage.includes('error') || lowerMessage.includes('fix')) {
+      return `**Debugging Strategy:**
+• Check for syntax errors first
+• Verify variable initialization and scope
+• Look for logical errors in conditionals
+• Test with different input values
+• Use console.log or debugger to trace execution`;
+    }
+    
+    if (lowerMessage.includes('help') || lowerMessage.includes('start') || lowerMessage.includes('how')) {
+      return `**Getting Started:**
+• Read through all the requirements carefully
+• Understand what ${challenge.kaiju.name} represents
+• Identify the problematic patterns in the code
+• Plan your refactoring approach step by step
+• Test frequently as you make changes`;
+    }
+    
+    return `**General Guidance:**
+• Focus on the specific problems ${challenge.kaiju.name} introduces
+• Make small, incremental changes
+• Test after each change to ensure nothing breaks
+• Keep the original functionality while improving the code structure
+• Don't forget to handle edge cases and error conditions`;
+  }
+
+  /**
+   * Check if error is network-related
+   */
+  private isNetworkError(error: any): boolean {
+    if (!error) return false;
+    
+    const message = error.message?.toLowerCase() || '';
+    const name = error.name?.toLowerCase() || '';
+    
+    return message.includes('network') ||
+           message.includes('fetch') ||
+           message.includes('timeout') ||
+           message.includes('connection') ||
+           name.includes('networkerror') ||
+           error.code === 'NETWORK_ERROR';
   }
 
   /**

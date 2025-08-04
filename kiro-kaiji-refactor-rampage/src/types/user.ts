@@ -90,4 +90,5 @@ export interface EvaluationResult {
   attempts: number;
   passed: boolean;
   evaluatedAt: Date;
+  isOfflineEvaluation?: boolean;
 }

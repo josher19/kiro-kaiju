@@ -17,6 +17,9 @@ import {
 import { KaijuEngine, type CodeGenerationOptions } from './kaijuEngine';
 import { codeTemplateGenerator } from './codeTemplateGenerator';
 import { KaijuType } from '@/types/kaiju';
+import { errorHandler, handleAsyncError } from '@/utils/errorHandler';
+import { networkService } from './networkService';
+import { offlineStorageService } from './offlineStorageService';
 
 export interface ChallengeGenerationRequest {
   config: ChallengeConfig;
@@ -46,103 +49,151 @@ export class ChallengeService {
    * Generate a complete challenge based on configuration
    */
   async generateChallenge(request: ChallengeGenerationRequest): Promise<ChallengeGenerationResponse> {
-    const { config, customRequirements = [] } = request;
-    
-    // Ensure monsters are loaded
-    await this.kaijuEngine.ensureMonstersLoaded();
-    
-    // Select appropriate Kaiju monster
-    const kaiju = this.kaijuEngine.selectKaijuForChallenge(
-      config.category,
-      config.difficulty
-    );
-
-    if (!kaiju) {
-      throw new Error('No suitable Kaiju monster found for the given configuration');
-    }
-
-    // Generate code using the selected Kaiju or template generator
-    let generatedCode;
-    let initialCode: string;
-
-    if (config.framework) {
-      // Use code template generator for framework-specific code
-      const template = codeTemplateGenerator.generateBaseTemplate(
-        config.language,
-        config.framework,
-        config.category
-      );
+    return handleAsyncError(async () => {
+      const { config, customRequirements = [] } = request;
       
-      // Get problematic patterns from the Kaiju
-      const patterns = codeTemplateGenerator.generateProblematicPatterns(
-        kaiju.type,
-        config.language,
+      // Check if we have a cached challenge that matches the request
+      const cachedChallenge = this.findCachedChallenge(config);
+      if (cachedChallenge) {
+        console.log('Using cached challenge for offline mode');
+        return this.createChallengeResponse(cachedChallenge);
+      }
+      
+      // Ensure monsters are loaded
+      await this.kaijuEngine.ensureMonstersLoaded();
+      
+      // Select appropriate Kaiju monster
+      const kaiju = this.kaijuEngine.selectKaijuForChallenge(
+        config.category,
         config.difficulty
       );
 
-      initialCode = template.baseCode;
-      generatedCode = {
-        code: initialCode,
-        problems: patterns.map(p => p.description),
-        hints: [
-          'Consider using framework-specific best practices',
-          'Look for patterns that violate the framework conventions',
-          'Focus on maintainability and code organization'
-        ],
-        requirements: [
-          'Refactor the code to follow framework best practices',
-          'Eliminate problematic patterns identified by the Kaiju',
-          'Maintain functionality while improving code quality'
-        ]
-      };
-    } else {
-      // Use Kaiju engine for language-specific code
-      const codeGenOptions: CodeGenerationOptions = {
-        language: config.language,
-        category: config.category,
-        difficulty: config.difficulty,
-        codeLength: this.getCodeLengthForDifficulty(config.difficulty),
-        complexity: config.difficulty
-      };
+      if (!kaiju) {
+        throw new Error('No suitable Kaiju monster found for the given configuration');
+      }
 
-      generatedCode = this.kaijuEngine.generateChallengeCode(
+      // Generate code using the selected Kaiju or template generator
+      let generatedCode;
+      let initialCode: string;
+
+      if (config.framework) {
+        // Use code template generator for framework-specific code
+        const template = codeTemplateGenerator.generateBaseTemplate(
+          config.language,
+          config.framework,
+          config.category
+        );
+        
+        // Get problematic patterns from the Kaiju
+        const patterns = codeTemplateGenerator.generateProblematicPatterns(
+          kaiju.type,
+          config.language,
+          config.difficulty
+        );
+
+        initialCode = template.baseCode;
+        generatedCode = {
+          code: initialCode,
+          problems: patterns.map(p => p.description),
+          hints: [
+            'Consider using framework-specific best practices',
+            'Look for patterns that violate the framework conventions',
+            'Focus on maintainability and code organization'
+          ],
+          requirements: [
+            'Refactor the code to follow framework best practices',
+            'Eliminate problematic patterns identified by the Kaiju',
+            'Maintain functionality while improving code quality'
+          ]
+        };
+      } else {
+        // Use Kaiju engine for language-specific code
+        const codeGenOptions: CodeGenerationOptions = {
+          language: config.language,
+          category: config.category,
+          difficulty: config.difficulty,
+          codeLength: this.getCodeLengthForDifficulty(config.difficulty),
+          complexity: config.difficulty
+        };
+
+        generatedCode = this.kaijuEngine.generateChallengeCode(
+          kaiju.type,
+          codeGenOptions
+        );
+
+        if (!generatedCode) {
+          throw new Error('Failed to generate code for the selected Kaiju');
+        }
+      }
+
+      // Generate requirements
+      const requirements = this.generateRequirements(
+        config,
         kaiju.type,
-        codeGenOptions
+        generatedCode.requirements,
+        customRequirements
       );
 
-      if (!generatedCode) {
-        throw new Error('Failed to generate code for the selected Kaiju');
-      }
-    }
+      // Generate test cases
+      const testCases = this.generateTestCases(config, kaiju.type, requirements);
 
-    // Generate requirements
-    const requirements = this.generateRequirements(
-      config,
-      kaiju.type,
-      generatedCode.requirements,
-      customRequirements
-    );
+      // Create challenge
+      const challenge: Challenge = {
+        id: this.generateChallengeId(),
+        kaiju,
+        config,
+        title: this.generateChallengeTitle(kaiju.name, config.category),
+        description: this.generateChallengeDescription(kaiju, config),
+        initialCode: generatedCode.code,
+        requirements,
+        testCases,
+        hints: generatedCode.hints,
+        createdAt: new Date(),
+        timeLimit: this.getTimeLimitForDifficulty(config.difficulty),
+        maxAttempts: this.getMaxAttemptsForDifficulty(config.difficulty)
+      };
 
-    // Generate test cases
-    const testCases = this.generateTestCases(config, kaiju.type, requirements);
+      // Cache the challenge for offline use
+      await offlineStorageService.cacheChallenge(challenge);
 
-    // Create challenge
-    const challenge: Challenge = {
-      id: this.generateChallengeId(),
-      kaiju,
-      config,
-      title: this.generateChallengeTitle(kaiju.name, config.category),
-      description: this.generateChallengeDescription(kaiju, config),
-      initialCode: generatedCode.code,
-      requirements,
-      testCases,
-      hints: generatedCode.hints,
-      createdAt: new Date(),
-      timeLimit: this.getTimeLimitForDifficulty(config.difficulty),
-      maxAttempts: this.getMaxAttemptsForDifficulty(config.difficulty)
-    };
+      // Calculate difficulty metrics
+      const difficultyMetrics = this.calculateDifficultyMetrics(challenge);
+      const estimatedTime = this.estimateCompletionTime(challenge);
 
-    // Calculate difficulty metrics
+      return {
+        challenge,
+        estimatedTime,
+        difficulty: difficultyMetrics
+      };
+
+    }, {
+      context: 'challenge_generation',
+      config: request.config,
+      userId: request.userId
+    }, {
+      maxRetries: 2,
+      retryDelay: 1000
+    });
+  }
+
+  /**
+   * Find a cached challenge that matches the configuration
+   */
+  private findCachedChallenge(config: ChallengeConfig): Challenge | null {
+    const cachedChallenges = offlineStorageService.getCachedChallenges();
+    
+    return cachedChallenges.find(challenge => 
+      challenge.config.language === config.language &&
+      challenge.config.framework === config.framework &&
+      challenge.config.category === config.category &&
+      challenge.config.difficulty === config.difficulty
+    ) || null;
+  }
+
+  /**
+   * Create challenge response from existing challenge
+   */
+  private createChallengeResponse(challenge: Challenge): ChallengeGenerationResponse {
     const difficultyMetrics = this.calculateDifficultyMetrics(challenge);
     const estimatedTime = this.estimateCompletionTime(challenge);
 
@@ -151,6 +202,20 @@ export class ChallengeService {
       estimatedTime,
       difficulty: difficultyMetrics
     };
+  }
+
+  /**
+   * Get available cached challenges for offline mode
+   */
+  getAvailableOfflineChallenges(): Challenge[] {
+    return offlineStorageService.getCachedChallenges();
+  }
+
+  /**
+   * Check if challenge generation is available offline
+   */
+  isOfflineGenerationAvailable(config: ChallengeConfig): boolean {
+    return this.findCachedChallenge(config) !== null;
   }
 
   /**

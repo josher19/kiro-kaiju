@@ -13,6 +13,9 @@ import type {
 } from '@/types/user';
 import type { Challenge, Requirement, TestCase } from '@/types/challenge';
 import { ProgrammingLanguage } from '@/types/challenge';
+import { errorHandler, handleAsyncError } from '@/utils/errorHandler';
+import { networkService } from './networkService';
+import { offlineStorageService } from './offlineStorageService';
 
 export interface EvaluationRequest {
   challengeId: string;
@@ -60,9 +63,24 @@ export class EvaluationService {
    * Evaluate submitted code against challenge requirements
    */
   async evaluateCode(request: EvaluationRequest): Promise<EvaluationResult> {
-    const { challenge, submittedCode, challengeId, userId, timeSpent, attempts } = request;
+    return handleAsyncError(async () => {
+      const { challenge, submittedCode, challengeId, userId, timeSpent, attempts } = request;
 
-    try {
+      // Check if we're offline and need to store for later evaluation
+      if (!networkService.isOnline.value) {
+        // Store evaluation for later sync
+        await offlineStorageService.storePendingEvaluation(
+          challengeId,
+          submittedCode,
+          userId,
+          timeSpent,
+          attempts
+        );
+
+        // Provide offline evaluation
+        return this.performOfflineEvaluation(request);
+      }
+
       // Perform all evaluation components
       const readabilityScore = await this.evaluateReadability(submittedCode, challenge.config.language);
       const qualityScore = await this.evaluateQuality(submittedCode, challenge.config.language);
@@ -95,7 +113,7 @@ export class EvaluationService {
       // Determine if challenge passed
       const passed = this.determinePassStatus(scores, overallScore);
 
-      return {
+      const result: EvaluationResult = {
         challengeId,
         userId,
         submittedCode,
@@ -108,9 +126,161 @@ export class EvaluationService {
         evaluatedAt: new Date()
       };
 
-    } catch (error) {
-      throw new Error(`Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return result;
+
+    }, {
+      context: 'code_evaluation',
+      challengeId: request.challengeId,
+      userId: request.userId
+    }, {
+      maxRetries: 1, // Limited retries for evaluation
+      retryDelay: 2000
+    });
+  }
+
+  /**
+   * Perform offline evaluation with limited functionality
+   */
+  private async performOfflineEvaluation(request: EvaluationRequest): Promise<EvaluationResult> {
+    const { challenge, submittedCode, challengeId, userId, timeSpent, attempts } = request;
+
+    // Perform basic offline evaluation
+    const readabilityScore = await this.evaluateReadability(submittedCode, challenge.config.language);
+    const qualityScore = await this.evaluateQuality(submittedCode, challenge.config.language);
+    const defectScore = await this.evaluateDefects(submittedCode, challenge.config.language);
+    
+    // Simplified requirement evaluation for offline mode
+    const requirementScore = await this.evaluateRequirementsOffline(
+      submittedCode,
+      challenge.requirements,
+      challenge.config.language
+    );
+
+    // Calculate overall score
+    const scores: EvaluationCriteria = {
+      readability: readabilityScore.score,
+      quality: qualityScore.score,
+      defects: defectScore.score,
+      requirements: requirementScore.score
+    };
+
+    const overallScore = this.calculateOverallScore(scores);
+
+    // Add offline notice to feedback
+    const feedback: EvaluationFeedback[] = [
+      {
+        ...readabilityScore.feedback,
+        message: `🔌 Offline Mode: ${readabilityScore.feedback.message}`
+      },
+      {
+        ...qualityScore.feedback,
+        message: `🔌 Offline Mode: ${qualityScore.feedback.message}`
+      },
+      {
+        ...defectScore.feedback,
+        message: `🔌 Offline Mode: ${defectScore.feedback.message}`
+      },
+      {
+        ...requirementScore.feedback,
+        message: `🔌 Offline Mode: ${requirementScore.feedback.message}`,
+        suggestions: [
+          ...requirementScore.feedback.suggestions,
+          'Full requirement verification will be available when online'
+        ]
+      }
+    ];
+
+    // Determine if challenge passed (more lenient in offline mode)
+    const passed = this.determinePassStatus(scores, overallScore, true);
+
+    return {
+      challengeId,
+      userId,
+      submittedCode,
+      scores,
+      overallScore,
+      feedback,
+      timeSpent,
+      attempts,
+      passed,
+      evaluatedAt: new Date(),
+      isOfflineEvaluation: true
+    };
+  }
+
+  /**
+   * Simplified requirement evaluation for offline mode
+   */
+  private async evaluateRequirementsOffline(
+    code: string,
+    requirements: Requirement[],
+    language: ProgrammingLanguage
+  ): Promise<{ score: number; feedback: EvaluationFeedback }> {
+    // Basic heuristic-based requirement checking
+    let satisfiedCount = 0;
+    const suggestions: string[] = [];
+    const issues: string[] = [];
+
+    for (const requirement of requirements) {
+      const satisfied = this.checkRequirementHeuristically(code, requirement, language);
+      if (satisfied) {
+        satisfiedCount++;
+      } else {
+        suggestions.push(`Address requirement: ${requirement.description}`);
+        issues.push(`Requirement may not be satisfied: ${requirement.description}`);
+      }
     }
+
+    const score = Math.round((satisfiedCount / requirements.length) * 100);
+
+    const feedback: EvaluationFeedback = {
+      category: 'requirements',
+      score,
+      maxScore: 100,
+      message: `Basic requirement check completed (${satisfiedCount}/${requirements.length} requirements appear satisfied)`,
+      suggestions,
+      codeExamples: []
+    };
+
+    return { score, feedback };
+  }
+
+  /**
+   * Check requirement using basic heuristics (for offline mode)
+   */
+  private checkRequirementHeuristically(
+    code: string,
+    requirement: Requirement,
+    language: ProgrammingLanguage
+  ): boolean {
+    const lowerDesc = requirement.description.toLowerCase();
+    const lowerCode = code.toLowerCase();
+
+    // Basic keyword matching for common requirements
+    if (lowerDesc.includes('refactor') || lowerDesc.includes('improve')) {
+      // Check if code has reasonable structure
+      return code.split('\n').length > 5 && code.includes('function') || code.includes('def');
+    }
+
+    if (lowerDesc.includes('test') || lowerDesc.includes('unit test')) {
+      // Check for test-like patterns
+      return lowerCode.includes('test') || lowerCode.includes('assert') || lowerCode.includes('expect');
+    }
+
+    if (lowerDesc.includes('error') || lowerDesc.includes('exception')) {
+      // Check for error handling
+      return lowerCode.includes('try') || lowerCode.includes('catch') || lowerCode.includes('except');
+    }
+
+    if (lowerDesc.includes('duplicate') || lowerDesc.includes('dry')) {
+      // Check for reduced duplication (simplified)
+      const lines = code.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const uniqueLines = new Set(lines);
+      return uniqueLines.size / lines.length > 0.8; // 80% unique lines
+    }
+
+    // Default to partially satisfied for offline mode
+    return true;
   }
 
   /**
