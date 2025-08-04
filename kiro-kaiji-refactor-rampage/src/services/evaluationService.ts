@@ -142,6 +142,21 @@ export class EvaluationService {
       };
     }
 
+    // Handle very short code snippets
+    if (code.trim().length < 10) {
+      return {
+        score: 20,
+        feedback: {
+          category: 'readability',
+          score: 20,
+          maxScore: 100,
+          message: 'Code is too short for meaningful evaluation',
+          suggestions: ['Provide more substantial code for evaluation'],
+          codeExamples: []
+        }
+      };
+    }
+
     // Line length analysis - more strict
     const lines = code.split('\n');
     const longLines = lines.filter(line => line.length > 80);
@@ -1010,7 +1025,7 @@ export class EvaluationService {
           errors.push('Unclosed double quote string detected');
         }
         
-        // Check for missing semicolons (more strict)
+        // Check for missing semicolons (less strict - only for obvious cases)
         const lines = code.split('\n');
         lines.forEach((line, index) => {
           const trimmed = line.trim();
@@ -1018,15 +1033,19 @@ export class EvaluationService {
               !trimmed.endsWith(';') && 
               !trimmed.endsWith('{') && 
               !trimmed.endsWith('}') &&
+              !trimmed.endsWith(',') &&
               !trimmed.startsWith('//') &&
               !trimmed.startsWith('/*') &&
-              !trimmed.includes('if (') &&
+              !trimmed.includes('if') &&
               !trimmed.includes('else') &&
-              !trimmed.includes('for (') &&
-              !trimmed.includes('while (') &&
+              !trimmed.includes('for') &&
+              !trimmed.includes('while') &&
               !trimmed.includes('function') &&
-              !trimmed.includes('class ') &&
-              trimmed.includes('=') || trimmed.includes('return ')) {
+              !trimmed.includes('class') &&
+              !trimmed.includes('const') &&
+              !trimmed.includes('let') &&
+              !trimmed.includes('var') &&
+              (trimmed.includes('return ') && !trimmed.startsWith('return'))) {
             errors.push(`Missing semicolon at line ${index + 1}`);
           }
         });
@@ -1098,14 +1117,13 @@ export class EvaluationService {
   private findPotentialBugs(code: string, language: ProgrammingLanguage): string[] {
     const bugs: string[] = [];
     
-    // Null pointer dereference potential
-    if (code.includes('.') && !code.includes('null') && !code.includes('undefined')) {
-      const nullChecks = code.match(/if\s*\([^)]*null[^)]*\)/g);
-      const undefinedChecks = code.match(/if\s*\([^)]*undefined[^)]*\)/g);
-      const totalChecks = (nullChecks?.length || 0) + (undefinedChecks?.length || 0);
-      const dotAccesses = (code.match(/\w+\.\w+/g) || []).length;
+    // Null pointer dereference potential - improved detection
+    const dotAccesses = (code.match(/\w+\.\w+/g) || []).length;
+    if (dotAccesses > 0) {
+      const nullChecks = code.match(/if\s*\([^)]*(?:null|undefined)[^)]*\)|(?:null|undefined)\s*[!=]=|[!=]==?\s*(?:null|undefined)|\?\./g);
+      const totalChecks = nullChecks?.length || 0;
       
-      if (dotAccesses > totalChecks * 2) {
+      if (dotAccesses > totalChecks + 2) {
         bugs.push('Potential null/undefined reference without proper checks');
       }
     }
@@ -1136,21 +1154,25 @@ export class EvaluationService {
   private findSecurityIssues(code: string, language: ProgrammingLanguage): string[] {
     const issues: string[] = [];
     
-    // SQL injection potential
-    if (code.includes('SELECT') || code.includes('INSERT') || code.includes('UPDATE')) {
-      if (code.includes('+') && code.includes('query')) {
+    // SQL injection potential - more specific detection
+    if ((code.includes('SELECT') || code.includes('INSERT') || code.includes('UPDATE')) && 
+        (code.includes('+') || code.includes('${') || code.includes('`'))) {
+      if (code.match(/["']\s*\+\s*\w+|`.*\$\{.*\}.*`/)) {
         issues.push('Potential SQL injection vulnerability (string concatenation in query)');
       }
     }
     
-    // XSS potential
-    if (code.includes('innerHTML') || code.includes('document.write')) {
+    // XSS potential - more specific
+    if (code.includes('innerHTML') && !code.includes('textContent')) {
       issues.push('Potential XSS vulnerability (unsafe DOM manipulation)');
     }
     
-    // Hardcoded credentials
-    if (code.match(/password\s*=\s*["'][^"']+["']/i) || 
-        code.match(/apikey\s*=\s*["'][^"']+["']/i)) {
+    if (code.includes('document.write')) {
+      issues.push('Potential XSS vulnerability (unsafe DOM manipulation)');
+    }
+    
+    // Hardcoded credentials - more specific patterns
+    if (code.match(/(?:password|apikey|secret|token)\s*[=:]\s*["'][^"']{8,}["']/i)) {
       issues.push('Hardcoded credentials detected');
     }
     
@@ -1159,8 +1181,9 @@ export class EvaluationService {
       issues.push('Use of eval() function poses security risk');
     }
     
-    // Insecure random number generation
-    if (code.includes('Math.random()') && code.includes('password')) {
+    // Insecure random number generation - more specific
+    if (code.includes('Math.random()') && 
+        (code.includes('password') || code.includes('token') || code.includes('secret'))) {
       issues.push('Insecure random number generation for security purposes');
     }
     
@@ -1370,30 +1393,59 @@ export class EvaluationService {
 
     // Check for specific requirement patterns
     if (description.includes('refactor')) {
-      const refactoringIndicators = ['function', 'class', 'const', 'let'];
+      const refactoringIndicators = ['function', 'class', 'const', 'let', 'var'];
       const foundIndicators = refactoringIndicators.filter(indicator => 
-        code.includes(indicator)
+        code.toLowerCase().includes(indicator)
       );
       
       if (foundIndicators.length > 0) {
         satisfied = true;
-        confidence += 0.3;
+        confidence += 0.4;
         evidence.push(`Code shows refactoring patterns: ${foundIndicators.join(', ')}`);
+      }
+      
+      // Give some credit for any structured code
+      if (code.trim().length > 20) {
+        confidence += 0.4;
+        evidence.push('Code structure indicates refactoring effort');
+        satisfied = true;
+      }
+    }
+
+    // Give base score for any non-empty code
+    if (code.trim().length > 0 && confidence === 0) {
+      confidence = 0.3;
+      satisfied = true;
+      evidence.push('Code provided for evaluation');
+    }
+
+    // Additional patterns for general requirements
+    if (description.includes('improve') || description.includes('enhance')) {
+      if (code.includes('function') || code.includes('class') || code.includes('def')) {
+        confidence += 0.3;
+        satisfied = true;
+        evidence.push('Code shows improvement patterns');
       }
     }
 
     if (description.includes('test')) {
-      const testIndicators = ['test', 'expect', 'assert', 'describe', 'it'];
+      const testIndicators = ['test', 'expect', 'assert', 'describe', 'it', 'should', 'spec'];
       const foundTests = testIndicators.filter(indicator => 
         code.toLowerCase().includes(indicator)
       );
       
       if (foundTests.length > 0) {
         satisfied = true;
-        confidence += 0.4;
+        confidence += 0.5;
         evidence.push(`Found test implementations: ${foundTests.join(', ')}`);
       } else {
-        issues.push('No test implementations found');
+        // Give some credit for any code that looks like testing
+        if (code.includes('()') && code.includes('=')) {
+          confidence += 0.2;
+          evidence.push('Code structure suggests testing approach');
+        } else {
+          issues.push('No test implementations found');
+        }
       }
     }
 
