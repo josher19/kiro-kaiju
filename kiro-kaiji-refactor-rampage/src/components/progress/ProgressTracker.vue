@@ -142,14 +142,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUserProgressStore } from '@/stores/userProgressStore';
-import type { KaijuType } from '@/types/kaiju';
+import { KaijuType } from '@/types/kaiju';
 import ProgressChart from './ProgressChart.vue';
 import MilestoneProgress from './MilestoneProgress.vue';
-import { 
-  TrendingUpIcon, 
-  TrendingDownIcon, 
-  MinusIcon 
-} from '@heroicons/vue/24/outline';
+// Icons will be handled with emojis for simplicity
 
 const progressStore = useUserProgressStore();
 
@@ -161,12 +157,12 @@ const totalAchievements = computed(() => progressStore.totalAchievements);
 const recentAchievements = computed(() => progressStore.recentAchievements);
 const improvementTrend = computed(() => progressStore.improvementTrend);
 
-// Trend display logic
-const trendIcon = computed(() => {
+// Trend display logic using emojis
+const trendEmoji = computed(() => {
   switch (improvementTrend.value) {
-    case 'improving': return TrendingUpIcon;
-    case 'declining': return TrendingDownIcon;
-    default: return MinusIcon;
+    case 'improving': return '📈';
+    case 'declining': return '📉';
+    default: return '➖';
   }
 });
 
