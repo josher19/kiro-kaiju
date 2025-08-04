@@ -7,9 +7,16 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { 
+  createKiroIntegrationService, 
+  getKiroIntegrationService,
+  defaultKiroConfig,
+  type KiroIntegrationConfig 
+} from '@/services/kiroIntegrationService';
 
 export type Theme = 'light' | 'dark' | 'auto';
 export type ViewType = 'challenges' | 'coding' | 'progress';
+export type DeploymentMode = 'local' | 'cloud';
 
 export const useAppStore = defineStore('app', () => {
   // State
@@ -19,6 +26,11 @@ export const useAppStore = defineStore('app', () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const loadingMessage = ref('Loading...');
+
+  // Deployment mode state
+  const deploymentMode = ref<DeploymentMode>('local');
+  const kiroIntegrationEnabled = ref(false);
+  const kiroConfig = ref<KiroIntegrationConfig>(defaultKiroConfig);
 
   // Mobile panel states
   const isMobileMenuOpen = ref(false);
@@ -115,14 +127,105 @@ export const useAppStore = defineStore('app', () => {
     isZoomPanelOpen.value = false;
   };
 
+  // Deployment mode management
+  const setDeploymentMode = async (mode: DeploymentMode) => {
+    try {
+      setLoading(true, `Switching to ${mode} mode...`);
+      
+      // Cleanup existing integration if switching modes
+      if (kiroIntegrationEnabled.value && deploymentMode.value !== mode) {
+        await cleanupKiroIntegration();
+      }
+
+      deploymentMode.value = mode;
+      
+      // Initialize Kiro integration for local mode
+      if (mode === 'local') {
+        await initializeKiroIntegration();
+      }
+
+      // Save preference
+      localStorage.setItem('kiro-kaiju-deployment-mode', mode);
+      
+    } catch (error) {
+      console.error('Failed to switch deployment mode:', error);
+      setError(`Failed to switch to ${mode} mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initializeKiroIntegration = async () => {
+    try {
+      // Check if we're in Kiro IDE environment
+      if (typeof window === 'undefined' || !window.kiro) {
+        console.warn('Kiro IDE environment not detected');
+        return;
+      }
+
+      // Create and initialize Kiro integration service
+      const integrationService = createKiroIntegrationService(kiroConfig.value);
+      await integrationService.initialize();
+      
+      kiroIntegrationEnabled.value = true;
+      console.log('Kiro integration initialized successfully');
+      
+    } catch (error) {
+      console.error('Failed to initialize Kiro integration:', error);
+      kiroIntegrationEnabled.value = false;
+      throw error;
+    }
+  };
+
+  const cleanupKiroIntegration = async () => {
+    try {
+      if (kiroIntegrationEnabled.value) {
+        const integrationService = getKiroIntegrationService();
+        await integrationService.cleanup();
+        kiroIntegrationEnabled.value = false;
+        console.log('Kiro integration cleaned up');
+      }
+    } catch (error) {
+      console.error('Failed to cleanup Kiro integration:', error);
+    }
+  };
+
+  const updateKiroConfig = (newConfig: Partial<KiroIntegrationConfig>) => {
+    kiroConfig.value = { ...kiroConfig.value, ...newConfig };
+    
+    // Save config to localStorage
+    localStorage.setItem('kiro-kaiju-config', JSON.stringify(kiroConfig.value));
+  };
+
   // Initialize app state
-  const initializeApp = () => {
+  const initializeApp = async () => {
     // Load theme preference
     const savedTheme = localStorage.getItem('kiro-kaiju-theme') as Theme;
     if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
       setTheme(savedTheme);
     } else {
       setTheme('auto');
+    }
+
+    // Load deployment mode preference
+    const savedMode = localStorage.getItem('kiro-kaiju-deployment-mode') as DeploymentMode;
+    if (savedMode && ['local', 'cloud'].includes(savedMode)) {
+      await setDeploymentMode(savedMode);
+    } else {
+      // Auto-detect deployment mode
+      const detectedMode = (typeof window !== 'undefined' && window.kiro) ? 'local' : 'cloud';
+      await setDeploymentMode(detectedMode);
+    }
+
+    // Load Kiro config
+    const savedConfig = localStorage.getItem('kiro-kaiju-config');
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig);
+        kiroConfig.value = { ...defaultKiroConfig, ...parsedConfig };
+      } catch (error) {
+        console.warn('Failed to parse saved Kiro config:', error);
+      }
     }
 
     // Set initial mobile state
@@ -145,6 +248,9 @@ export const useAppStore = defineStore('app', () => {
     isLoading,
     error,
     loadingMessage,
+    deploymentMode,
+    kiroIntegrationEnabled,
+    kiroConfig,
     isMobileMenuOpen,
     isAIPanelOpen,
     isZoomPanelOpen,
@@ -160,6 +266,10 @@ export const useAppStore = defineStore('app', () => {
     setLoading,
     setError,
     clearError,
+    setDeploymentMode,
+    initializeKiroIntegration,
+    cleanupKiroIntegration,
+    updateKiroConfig,
     toggleMobileMenu,
     closeMobileMenu,
     toggleAIPanel,

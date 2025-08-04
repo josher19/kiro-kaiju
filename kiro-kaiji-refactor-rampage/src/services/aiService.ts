@@ -109,33 +109,131 @@ export class AIService {
     request: AIChatRequest,
     challengeContext: ChallengeContext
   ): Promise<AIChatMessage> {
-    // In local mode, we integrate directly with Kiro's AI capabilities
-    const systemPrompt = this.buildSystemPrompt(challengeContext);
-    
-    // This would integrate with Kiro's internal AI API
-    // For now, we'll simulate the response structure
-    const response = await fetch('/api/kiro-ai/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...request,
-        systemPrompt,
-        context: challengeContext
-      })
-    });
+    try {
+      // Check if we're in Kiro IDE environment
+      if (!this.isKiroEnvironment()) {
+        throw new Error('Not running in Kiro IDE environment');
+      }
 
-    if (!response.ok) {
-      throw new Error(`Kiro AI API error: ${response.status}`);
+      const systemPrompt = this.buildSystemPrompt(challengeContext);
+      
+      // Use Kiro's built-in AI capabilities
+      const kiroAIRequest = {
+        message: request.message,
+        systemPrompt,
+        context: {
+          challengeId: request.challengeId,
+          currentCode: request.currentCode,
+          challenge: challengeContext.challenge,
+          conversationHistory: request.conversationHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }))
+        },
+        options: {
+          temperature: 0.7,
+          maxTokens: 1000,
+          includeCodeAnalysis: true,
+          includeRefactoringSuggestions: true
+        }
+      };
+
+      const response = await window.kiro!.ai!.chat(kiroAIRequest);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Kiro AI request failed');
+      }
+
+      return {
+        id: this.generateMessageId(),
+        role: 'assistant',
+        content: response.message,
+        timestamp: new Date(),
+        context: {
+          challengeId: request.challengeId,
+          currentCode: request.currentCode
+        }
+      };
+    } catch (error) {
+      console.error('Kiro AI integration error:', error);
+      
+      // Fallback to local processing if Kiro AI is not available
+      return this.generateFallbackResponse(request, challengeContext);
+    }
+  }
+
+  /**
+   * Check if running in Kiro IDE environment
+   */
+  private isKiroEnvironment(): boolean {
+    return typeof window !== 'undefined' && 
+           window.kiro !== undefined &&
+           window.kiro.ai !== undefined;
+  }
+
+  /**
+   * Generate fallback response when Kiro AI is not available
+   */
+  private generateFallbackResponse(
+    request: AIChatRequest,
+    challengeContext: ChallengeContext
+  ): AIChatMessage {
+    const { challenge } = challengeContext;
+    
+    // Generate contextual response based on the request
+    let content = '';
+    
+    if (request.message.toLowerCase().includes('refactor')) {
+      content = `I can help you refactor this code to overcome ${challenge.kaiju.name}! Here are some general suggestions:
+
+1. Look for the specific anti-patterns that ${challenge.kaiju.name} represents
+2. Break down complex functions into smaller, more manageable pieces
+3. Eliminate code duplication where possible
+4. Improve variable and function naming for clarity
+5. Add proper error handling
+
+Would you like me to analyze a specific part of your code?`;
+    } else if (request.message.toLowerCase().includes('test')) {
+      content = `For testing this challenge, consider:
+
+1. Write unit tests for each function
+2. Test edge cases and error conditions
+3. Verify that all requirements are met
+4. Use meaningful test descriptions
+5. Ensure good code coverage
+
+The challenge includes ${challenge.testCases.length} test cases to validate your solution.`;
+    } else if (request.message.toLowerCase().includes('bug') || request.message.toLowerCase().includes('error')) {
+      content = `To debug this code effectively:
+
+1. Check for syntax errors first
+2. Look for logical errors in the algorithm
+3. Verify variable scoping and initialization
+4. Check for off-by-one errors in loops
+5. Ensure proper error handling
+
+${challenge.kaiju.name} is known for: ${challenge.kaiju.description}`;
+    } else {
+      content = `I'm here to help you tackle this ${challenge.kaiju.name} challenge! 
+
+Current challenge: ${challenge.title}
+Difficulty: ${challenge.config.difficulty}/5
+Language: ${challenge.config.language}
+
+You can ask me about:
+- Refactoring strategies
+- Code analysis
+- Testing approaches
+- Debugging techniques
+- Best practices
+
+What specific aspect would you like help with?`;
     }
 
-    const data = await response.json();
-    
     return {
       id: this.generateMessageId(),
       role: 'assistant',
-      content: data.message,
+      content,
       timestamp: new Date(),
       context: {
         challengeId: request.challengeId,
