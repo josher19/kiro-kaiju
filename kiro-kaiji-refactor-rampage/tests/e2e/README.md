@@ -1,6 +1,32 @@
 # End-to-End Testing Suite
 
-This directory contains comprehensive E2E tests for the Kiro Kaiji: Refactor Rampage application using Playwright.
+This directory contains a comprehensive E2E testing suite for the Kiro Kaiji: Refactor Rampage application using Playwright. The test suite has been enhanced with advanced configuration, utilities, and reporting capabilities.
+
+## 🚀 Enhanced Features
+
+### Advanced Test Infrastructure
+- **Enhanced Test Runner** (`test-runner.ts`) - Custom test execution with performance monitoring and detailed reporting
+- **Centralized Configuration** (`test-config.ts`) - Comprehensive test data, mock responses, and environment settings
+- **Enhanced Test Helpers** (`helpers/test-helpers.ts`) - Improved utilities with API mocking and performance measurement
+- **Validation Tests** (`test-validation.spec.ts`) - Infrastructure validation without requiring a running server
+
+### Performance Monitoring
+- Real-time performance measurement during test execution
+- Configurable performance thresholds for different operations
+- Memory usage monitoring and leak detection
+- Cross-browser performance comparison
+
+### Advanced Reporting
+- HTML reports with detailed metrics and visualizations
+- JSON reports for CI/CD integration
+- Performance benchmarking reports
+- Cross-browser compatibility matrices
+
+### API Mocking & Network Testing
+- Comprehensive API mocking for offline testing
+- Network failure simulation and recovery testing
+- Configurable mock responses for different scenarios
+- Network quality assessment and recommendations
 
 ## Test Structure
 

@@ -1,7 +1,15 @@
 import { Page, expect } from '@playwright/test';
+import { 
+  getSelector, 
+  getPerformanceThreshold, 
+  getTestData, 
+  getMockResponse,
+  TEST_DATA,
+  PERFORMANCE_THRESHOLDS
+} from '../test-config';
 
 /**
- * Test helper utilities for E2E tests
+ * Enhanced test helper utilities for E2E tests
  */
 export class TestHelpers {
   constructor(private page: Page) {}
@@ -14,12 +22,39 @@ export class TestHelpers {
     category = 'refactoring',
     difficulty = 'beginner'
   ) {
-    await this.page.selectOption('[data-testid="language-select"]', language);
-    await this.page.selectOption('[data-testid="category-select"]', category);
-    await this.page.selectOption('[data-testid="difficulty-select"]', difficulty);
-    await this.page.click('[data-testid="generate-challenge-btn"]');
+    await this.page.selectOption(getSelector('languageSelect'), language);
+    await this.page.selectOption(getSelector('categorySelect'), category);
+    await this.page.selectOption(getSelector('difficultySelect'), difficulty);
+    await this.page.click(getSelector('generateChallengeBtn'));
     
-    await this.page.waitForSelector('[data-testid="challenge-container"]', { timeout: 15000 });
+    await this.page.waitForSelector(getSelector('challengeContainer'), { 
+      timeout: getPerformanceThreshold('challengeGeneration') 
+    });
+  }
+
+  /**
+   * Generate challenge with specific configuration
+   */
+  async generateChallengeWithConfig(config: {
+    language: string;
+    framework?: string;
+    category: string;
+    difficulty: string;
+  }) {
+    await this.page.selectOption(getSelector('languageSelect'), config.language);
+    
+    if (config.framework) {
+      await this.page.waitForTimeout(500); // Wait for framework options to load
+      await this.page.selectOption(getSelector('frameworkSelect'), config.framework);
+    }
+    
+    await this.page.selectOption(getSelector('categorySelect'), config.category);
+    await this.page.selectOption(getSelector('difficultySelect'), config.difficulty);
+    await this.page.click(getSelector('generateChallengeBtn'));
+    
+    await this.page.waitForSelector(getSelector('challengeContainer'), { 
+      timeout: getPerformanceThreshold('challengeGeneration') 
+    });
   }
 
   /**
@@ -50,53 +85,128 @@ export class TestHelpers {
    * Submit code for evaluation and wait for results
    */
   async submitAndWaitForEvaluation() {
-    await this.page.click('[data-testid="submit-solution-btn"]');
-    await this.page.waitForSelector('[data-testid="evaluation-results"]', { timeout: 20000 });
+    await this.page.click(getSelector('submitSolutionBtn'));
+    await this.page.waitForSelector(getSelector('evaluationResults'), { 
+      timeout: getPerformanceThreshold('codeEvaluation') 
+    });
   }
 
   /**
    * Open AI chat interface
    */
   async openAIChat() {
-    await this.page.click('[data-testid="ai-chat-toggle"]');
-    await expect(this.page.locator('[data-testid="ai-chat-interface"]')).toBeVisible();
+    await this.page.click(getSelector('aiChatToggle'));
+    await expect(this.page.locator(getSelector('aiChatInterface'))).toBeVisible();
   }
 
   /**
    * Send message to AI and wait for response
    */
   async sendAIMessage(message: string) {
-    await this.page.fill('[data-testid="ai-chat-input"]', message);
-    await this.page.click('[data-testid="ai-chat-send"]');
-    await this.page.waitForSelector('[data-testid="ai-message"]', { timeout: 10000 });
+    await this.page.fill(getSelector('aiChatInput'), message);
+    await this.page.click(getSelector('aiChatSend'));
+    await this.page.waitForSelector(getSelector('aiMessage'), { 
+      timeout: getPerformanceThreshold('aiResponse') 
+    });
   }
 
   /**
    * Open Zoom-a-Friend panel
    */
   async openZoomAFriend() {
-    await this.page.click('[data-testid="zoom-friend-toggle"]');
-    await expect(this.page.locator('[data-testid="zoom-friend-panel"]')).toBeVisible();
+    await this.page.click(getSelector('zoomFriendToggle'));
+    await expect(this.page.locator(getSelector('zoomFriendPanel'))).toBeVisible();
   }
 
   /**
    * Interact with a specific team member
    */
   async interactWithTeamMember(memberType: 'qa-pufferfish' | 'architect-owl' | 'product-pig' | 'senior-cat') {
-    await this.page.click(`[data-testid="team-member-${memberType}"]`);
-    await this.page.waitForSelector('[data-testid="team-dialog"]', { timeout: 5000 });
+    const selectorMap = {
+      'qa-pufferfish': 'teamMemberQA',
+      'architect-owl': 'teamMemberArchitect', 
+      'product-pig': 'teamMemberProduct',
+      'senior-cat': 'teamMemberSenior'
+    } as const;
+    
+    await this.page.click(getSelector(selectorMap[memberType]));
+    await this.page.waitForSelector(getSelector('teamDialog'), { timeout: 5000 });
   }
 
   /**
    * Verify all evaluation scores are displayed
    */
   async verifyEvaluationScores() {
-    await expect(this.page.locator('[data-testid="readability-score"]')).toBeVisible();
-    await expect(this.page.locator('[data-testid="quality-score"]')).toBeVisible();
-    await expect(this.page.locator('[data-testid="defects-score"]')).toBeVisible();
-    await expect(this.page.locator('[data-testid="requirements-score"]')).toBeVisible();
-    await expect(this.page.locator('[data-testid="overall-score"]')).toBeVisible();
-    await expect(this.page.locator('[data-testid="evaluation-feedback"]')).toBeVisible();
+    await expect(this.page.locator(getSelector('readabilityScore'))).toBeVisible();
+    await expect(this.page.locator(getSelector('qualityScore'))).toBeVisible();
+    await expect(this.page.locator(getSelector('defectsScore'))).toBeVisible();
+    await expect(this.page.locator(getSelector('requirementsScore'))).toBeVisible();
+    await expect(this.page.locator(getSelector('overallScore'))).toBeVisible();
+    await expect(this.page.locator(getSelector('evaluationFeedback'))).toBeVisible();
+  }
+
+  /**
+   * Setup API mocking for tests
+   */
+  async setupApiMocks() {
+    // Mock challenge generation
+    await this.page.route('**/api/challenges/generate', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(getMockResponse('challengeGeneration'))
+      });
+    });
+
+    // Mock code evaluation
+    await this.page.route('**/api/evaluate', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(getMockResponse('codeEvaluation'))
+      });
+    });
+
+    // Mock AI chat
+    await this.page.route('**/api/ai/chat', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(getMockResponse('aiChat'))
+      });
+    });
+
+    // Mock team member dialog
+    await this.page.route('**/api/team/dialog', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(getMockResponse('teamMemberDialog'))
+      });
+    });
+
+    // Mock user progress
+    await this.page.route('**/api/progress', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(getMockResponse('userProgress'))
+      });
+    });
+  }
+
+  /**
+   * Simulate network failure for error testing
+   */
+  async simulateNetworkFailure() {
+    await this.page.route('**/api/**', route => route.abort());
+  }
+
+  /**
+   * Clear all route mocks
+   */
+  async clearApiMocks() {
+    await this.page.unroute('**/api/**');
   }
 
   /**

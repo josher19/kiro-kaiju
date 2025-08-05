@@ -1,4 +1,4 @@
-import { test, expect, devices } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Cross-Browser Compatibility Tests', () => {
   const browsers = [
@@ -67,8 +67,10 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           // Check computed styles (basic responsiveness)
           const containerBox = await mainContainer.boundingBox();
           expect(containerBox).toBeTruthy();
-          expect(containerBox.width).toBeGreaterThan(0);
-          expect(containerBox.height).toBeGreaterThan(0);
+          if (containerBox) {
+            expect(containerBox.width).toBeGreaterThan(0);
+            expect(containerBox.height).toBeGreaterThan(0);
+          }
         });
 
         await test.step('Test JavaScript features', async () => {
@@ -220,7 +222,9 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           await expect(mainContainer).toBeVisible();
           
           const containerBox = await mainContainer.boundingBox();
-          expect(containerBox.width).toBeGreaterThan(1000);
+          if (containerBox) {
+            expect(containerBox.width).toBeGreaterThan(1000);
+          }
         });
 
         await test.step('Test tablet layout', async () => {
@@ -232,7 +236,9 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           await expect(mainContainer).toBeVisible();
           
           const containerBox = await mainContainer.boundingBox();
-          expect(containerBox.width).toBeLessThanOrEqual(768);
+          if (containerBox) {
+            expect(containerBox.width).toBeLessThanOrEqual(768);
+          }
         });
 
         await test.step('Test mobile layout', async () => {

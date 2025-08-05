@@ -86,6 +86,34 @@
           </button>
         </nav>
         
+        <!-- Deployment Mode Switcher -->
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+          <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Deployment Mode</div>
+          <div class="flex space-x-2">
+            <button
+              @click="switchToCloudMode"
+              :class="deploymentMode === 'cloud' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'"
+              class="flex-1 px-2 py-1 rounded text-xs font-medium transition-colors"
+            >
+              ☁️ Cloud
+            </button>
+            <button
+              @click="switchToLocalMode"
+              :class="deploymentMode === 'local' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'"
+              class="flex-1 px-2 py-1 rounded text-xs font-medium transition-colors"
+            >
+              🏠 Local
+            </button>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {{ deploymentMode === 'local' ? 'Kiro IDE Integration' : 'AWS Cloud Services' }}
+          </div>
+        </div>
+
         <!-- User Progress Summary -->
         <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
@@ -161,6 +189,9 @@
                       <p class="text-sm text-gray-500 dark:text-gray-400">
                         {{ currentChallenge?.config.language || 'Select a challenge to start coding' }}
                       </p>
+                      <p v-if="currentChallenge?.description" class="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                        {{ currentChallenge.description }}
+                      </p>
                     </div>
                   </div>
                   
@@ -185,6 +216,21 @@
                   </div>
                 </div>
                 
+                <!-- Challenge Description (if available) -->
+                <div v-if="currentChallenge?.description" class="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+                  <div class="flex items-start space-x-3">
+                    <div class="text-blue-500 dark:text-blue-400 mt-0.5">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">Challenge Description</h4>
+                      <p class="text-sm text-blue-800 dark:text-blue-200">{{ currentChallenge.description }}</p>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Code Editor -->
                 <div class="flex-1 min-h-0">
                   <CodeEditor
@@ -347,7 +393,8 @@ const {
   isDarkMode,
   isLoading,
   error,
-  loadingMessage
+  loadingMessage,
+  deploymentMode
 } = storeToRefs(appStore)
 
 const { currentChallenge } = storeToRefs(challengeStore)
@@ -424,6 +471,14 @@ const getEditorLanguage = (language: ProgrammingLanguage): string => {
 const retryOperation = () => {
   appStore.clearError()
   // Implement retry logic based on current view
+}
+
+const switchToCloudMode = () => {
+  appStore.setDeploymentMode('cloud')
+}
+
+const switchToLocalMode = () => {
+  appStore.setDeploymentMode('local')
 }
 
 const handleResize = () => {

@@ -159,7 +159,8 @@ export const useAppStore = defineStore('app', () => {
     try {
       // Check if we're in Kiro IDE environment
       if (typeof window === 'undefined' || !window.kiro) {
-        console.warn('Kiro IDE environment not detected');
+        console.warn('Kiro IDE environment not detected - running in standalone mode');
+        kiroIntegrationEnabled.value = false;
         return;
       }
 
@@ -173,7 +174,8 @@ export const useAppStore = defineStore('app', () => {
     } catch (error) {
       console.error('Failed to initialize Kiro integration:', error);
       kiroIntegrationEnabled.value = false;
-      throw error;
+      // Don't throw error for standalone usage
+      console.warn('Continuing in standalone mode without Kiro integration');
     }
   };
 
@@ -212,7 +214,7 @@ export const useAppStore = defineStore('app', () => {
     if (savedMode && ['local', 'cloud'].includes(savedMode)) {
       await setDeploymentMode(savedMode);
     } else {
-      // Auto-detect deployment mode
+      // Auto-detect deployment mode - default to cloud for standalone usage
       const detectedMode = (typeof window !== 'undefined' && window.kiro) ? 'local' : 'cloud';
       await setDeploymentMode(detectedMode);
     }
