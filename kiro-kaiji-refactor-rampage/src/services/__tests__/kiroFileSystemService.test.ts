@@ -343,17 +343,25 @@ describe('KiroFileSystemService', () => {
 
     describe('cleanup', () => {
         beforeEach(async () => {
+            const mockWatcher = { 
+                on: vi.fn(),
+                close: vi.fn() 
+            };
             mockKiroAPI.fileSystem.ensureDirectory.mockResolvedValue(undefined);
             mockKiroAPI.fileSystem.removeDirectory.mockResolvedValue(undefined);
+            mockKiroAPI.fileSystem.watch.mockResolvedValue(mockWatcher);
             await service.initialize();
         });
 
         it('should cleanup challenge files successfully', async () => {
-            const mockWatcher = { close: vi.fn() };
+            const mockFileWatcher = { 
+                on: vi.fn(),
+                close: vi.fn() 
+            };
 
             // Set up mocks before creating files
             mockKiroAPI.fileSystem.writeFile.mockResolvedValue(undefined);
-            mockKiroAPI.fileSystem.watchFile.mockResolvedValue(mockWatcher);
+            mockKiroAPI.fileSystem.watchFile.mockResolvedValue(mockFileWatcher);
 
             // Create some files first to establish watchers
             await service.createChallengeFiles(mockChallenge);
@@ -363,7 +371,7 @@ describe('KiroFileSystemService', () => {
 
             expect(mockKiroAPI.fileSystem.removeDirectory).toHaveBeenCalledWith('./test-challenges/test-challenge-1');
             // The watcher close should be called for each file that was being watched
-            expect(mockWatcher.close).toHaveBeenCalledTimes(4); // 4 files created, so 4 watchers closed
+            expect(mockFileWatcher.close).toHaveBeenCalledTimes(4); // 4 files created, so 4 watchers closed
         });
     });
 

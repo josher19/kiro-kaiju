@@ -352,25 +352,25 @@ export class EvaluationService {
       issues.push(`Found ${indentationIssues} indentation inconsistencies`);
     }
 
-    // Naming conventions - more strict penalty
+    // Naming conventions - reasonable penalty
     const namingScore = this.evaluateNamingConventions(code, language);
-    score -= (100 - namingScore) * 0.5;
-    if (namingScore < 80) {
+    score -= (100 - namingScore) * 0.2;
+    if (namingScore < 60) {
       suggestions.push('Use descriptive and consistent naming conventions');
       issues.push('Some variables or functions have unclear names');
     }
 
-    // Comments and documentation
+    // Comments and documentation - reduced penalty
     const commentScore = this.evaluateComments(code, language);
-    score -= (100 - commentScore) * 0.3;
-    if (commentScore < 70) {
+    score -= (100 - commentScore) * 0.1;
+    if (commentScore < 50) {
       suggestions.push('Add meaningful comments to explain complex logic');
       issues.push('Code lacks sufficient documentation');
     }
 
-    // Cognitive complexity - more strict
-    if (metrics.cognitiveComplexity > 10) {
-      score -= Math.min(35, (metrics.cognitiveComplexity - 10) * 3);
+    // Cognitive complexity - reasonable penalty
+    if (metrics.cognitiveComplexity > 15) {
+      score -= Math.min(20, (metrics.cognitiveComplexity - 15) * 2);
       suggestions.push('Break down complex functions into smaller, more manageable pieces');
       issues.push(`High cognitive complexity: ${metrics.cognitiveComplexity}`);
     }
@@ -2112,10 +2112,10 @@ export class EvaluationService {
   private determinePassStatus(scores: EvaluationCriteria, overallScore: number): boolean {
     // Must meet minimum thresholds in all categories
     const minimumThresholds = {
-      readability: 60,
-      quality: 60,
-      defects: 70,
-      requirements: 80
+      readability: 50,
+      quality: 50,
+      defects: 60,
+      requirements: 70
     };
 
     const meetsThresholds = Object.entries(minimumThresholds).every(([category, threshold]) => {

@@ -168,7 +168,7 @@ describe('KiroIntegrationService', () => {
     it('should throw error when not in Kiro environment', async () => {
       // Temporarily remove Kiro API
       const originalKiro = window.kiro;
-      delete (window as any).kiro;
+      (window as any).kiro = undefined;
 
       await expect(service.initialize()).rejects.toThrow('Not running in Kiro IDE environment');
 
