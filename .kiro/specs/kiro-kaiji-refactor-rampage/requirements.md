@@ -90,3 +90,16 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 3. WHEN a user views their profile THEN the system SHALL display statistics on challenges completed, average scores, and improvement trends
 4. WHEN a user defeats a specific Kaiju type THEN the system SHALL award achievement badges
 5. WHEN a user reaches milestones THEN the system SHALL provide encouraging feedback and unlock special challenges
+
+### Requirement 8
+
+**User Story:** As a developer using the application, I want flexible AI provider options including local and remote LLM support, so that I can choose the most appropriate AI solution for my environment and needs.
+
+#### Acceptance Criteria
+
+1. WHEN the system is configured for local LLM THEN it SHALL connect to an OpenAI-compatible endpoint at http://localhost:1234/v1 by default
+2. WHEN the system is configured for remote LLM THEN it SHALL use OpenRouter API with preferred models including openai/gpt-oss-20b and Claude
+3. WHEN making LLM requests THEN the system SHALL implement a small delay before calling the LLM to avoid hitting quotas
+4. WHEN a preferred remote model is unavailable THEN the system SHALL automatically fallback to other coding-focused models
+5. WHEN local LLM endpoint is unreachable THEN the system SHALL provide clear error messages and fallback options
+6. WHEN using remote LLM THEN the system SHALL optimize for free tier usage and cost-aware model selection

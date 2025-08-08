@@ -92,8 +92,8 @@ const emit = defineEmits<{
 
 const visible = ref(false);
 const progress = ref(100);
-let progressInterval: NodeJS.Timeout | null = null;
-let autoCloseTimeout: NodeJS.Timeout | null = null;
+let progressInterval: number | null = null;
+let autoCloseTimeout: number | null = null;
 
 // Watch for new achievements
 watch(() => props.achievement, (newAchievement) => {
@@ -113,12 +113,12 @@ const show = () => {
       if (progress.value <= 0) {
         clearInterval(progressInterval!);
       }
-    }, 100);
+    }, 100) as unknown as number;
     
     // Auto close after duration
     autoCloseTimeout = setTimeout(() => {
       close();
-    }, props.duration);
+    }, props.duration) as unknown as number;
   }
 };
 

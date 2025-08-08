@@ -6,10 +6,10 @@
  * and detailed feedback generation.
  */
 
-import type { 
-  EvaluationResult, 
-  EvaluationCriteria, 
-  EvaluationFeedback 
+import type {
+  EvaluationResult,
+  EvaluationCriteria,
+  EvaluationFeedback
 } from '@/types/user';
 import type { Challenge, Requirement, TestCase } from '@/types/challenge';
 import { ProgrammingLanguage } from '@/types/challenge';
@@ -86,8 +86,8 @@ export class EvaluationService {
       const qualityScore = await this.evaluateQuality(submittedCode, challenge.config.language);
       const defectScore = await this.evaluateDefects(submittedCode, challenge.config.language);
       const requirementScore = await this.evaluateRequirements(
-        submittedCode, 
-        challenge.requirements, 
+        submittedCode,
+        challenge.requirements,
         challenge.testCases,
         challenge.config.language
       );
@@ -148,7 +148,7 @@ export class EvaluationService {
     const readabilityScore = await this.evaluateReadability(submittedCode, challenge.config.language);
     const qualityScore = await this.evaluateQuality(submittedCode, challenge.config.language);
     const defectScore = await this.evaluateDefects(submittedCode, challenge.config.language);
-    
+
     // Simplified requirement evaluation for offline mode
     const requirementScore = await this.evaluateRequirementsOffline(
       submittedCode,
@@ -191,7 +191,7 @@ export class EvaluationService {
     ];
 
     // Determine if challenge passed (more lenient in offline mode)
-    const passed = this.determinePassStatus(scores, overallScore, true);
+    const passed = this.determinePassStatus(scores, overallScore);
 
     return {
       challengeId,
@@ -286,12 +286,12 @@ export class EvaluationService {
   /**
    * Evaluate code readability using automated metrics
    */
-  private async evaluateReadability(
-    code: string, 
+  protected async evaluateReadability(
+    code: string,
     language: ProgrammingLanguage
   ): Promise<{ score: number; feedback: EvaluationFeedback }> {
     const metrics = this.calculateCodeMetrics(code, language);
-    
+
     // Start with base score
     let score = 100;
     const suggestions: string[] = [];
@@ -394,6 +394,17 @@ export class EvaluationService {
 
     score = Math.max(0, Math.round(score));
 
+    // Ensure we always have at least one suggestion
+    if (suggestions.length === 0) {
+      if (score >= 90) {
+        suggestions.push('Excellent readability! Consider adding more descriptive comments for complex logic.');
+      } else if (score >= 70) {
+        suggestions.push('Good readability overall. Consider minor improvements to variable naming or formatting.');
+      } else {
+        suggestions.push('Focus on improving code structure and naming conventions for better readability.');
+      }
+    }
+
     const feedback: EvaluationFeedback = {
       category: 'readability',
       score,
@@ -410,11 +421,11 @@ export class EvaluationService {
    * Evaluate code quality including maintainability and best practices
    */
   private async evaluateQuality(
-    code: string, 
+    code: string,
     language: ProgrammingLanguage
   ): Promise<{ score: number; feedback: EvaluationFeedback }> {
     const metrics = this.calculateCodeMetrics(code, language);
-    
+
     let score = 100;
     const suggestions: string[] = [];
     const issues: string[] = [];
@@ -459,6 +470,17 @@ export class EvaluationService {
 
     score = Math.max(0, Math.round(score));
 
+    // Ensure we always have at least one suggestion
+    if (suggestions.length === 0) {
+      if (score >= 90) {
+        suggestions.push('Excellent code quality! Consider adding more comprehensive error handling.');
+      } else if (score >= 70) {
+        suggestions.push('Good code quality. Consider reducing complexity and improving maintainability.');
+      } else {
+        suggestions.push('Focus on reducing complexity, eliminating duplication, and following best practices.');
+      }
+    }
+
     const feedback: EvaluationFeedback = {
       category: 'quality',
       score,
@@ -475,11 +497,11 @@ export class EvaluationService {
    * Evaluate code for defects and bugs through static analysis
    */
   private async evaluateDefects(
-    code: string, 
+    code: string,
     language: ProgrammingLanguage
   ): Promise<{ score: number; feedback: EvaluationFeedback }> {
     const defects = this.analyzeDefects(code, language);
-    
+
     let score = 100;
     const suggestions: string[] = [];
     const issues: string[] = [];
@@ -521,6 +543,17 @@ export class EvaluationService {
 
     score = Math.max(0, Math.round(score));
 
+    // Ensure we always have at least one suggestion
+    if (suggestions.length === 0) {
+      if (score >= 90) {
+        suggestions.push('Great job! No major defects found. Consider adding more comprehensive testing.');
+      } else if (score >= 70) {
+        suggestions.push('Good defect management. Consider reviewing edge cases and error handling.');
+      } else {
+        suggestions.push('Focus on fixing syntax errors, potential bugs, and security vulnerabilities.');
+      }
+    }
+
     const feedback: EvaluationFeedback = {
       category: 'defects',
       score,
@@ -543,7 +576,7 @@ export class EvaluationService {
     language: ProgrammingLanguage
   ): Promise<{ score: number; feedback: EvaluationFeedback }> {
     const verifications: RequirementVerification[] = [];
-    
+
     for (const requirement of requirements) {
       const verification = await this.verifyRequirement(code, requirement, testCases, language);
       verifications.push(verification);
@@ -562,7 +595,7 @@ export class EvaluationService {
     verifications.forEach((verification, index) => {
       const requirement = requirements[index];
       const weight = requirement.priority === 'must' ? 3 : requirement.priority === 'should' ? 2 : 1;
-      
+
       if (verification.satisfied) {
         weightedScore += weight * verification.confidence;
       } else {
@@ -575,6 +608,17 @@ export class EvaluationService {
     });
 
     const score = Math.round((weightedScore / totalWeight) * 100);
+
+    // Ensure we always have at least one suggestion
+    if (suggestions.length === 0) {
+      if (score >= 90) {
+        suggestions.push('Excellent! All requirements satisfied. Consider adding additional features or optimizations.');
+      } else if (score >= 70) {
+        suggestions.push('Most requirements satisfied. Review any remaining requirements for completeness.');
+      } else {
+        suggestions.push('Focus on addressing the core requirements to improve your solution.');
+      }
+    }
 
     const feedback: EvaluationFeedback = {
       category: 'requirements',
@@ -593,7 +637,7 @@ export class EvaluationService {
    */
   private calculateCodeMetrics(code: string, language: ProgrammingLanguage): CodeMetrics {
     const lines = code.split('\n').filter(line => line.trim().length > 0);
-    
+
     return {
       linesOfCode: lines.length,
       cyclomaticComplexity: this.calculateCyclomaticComplexity(code, language),
@@ -609,17 +653,17 @@ export class EvaluationService {
    */
   private calculateCyclomaticComplexity(code: string, language: ProgrammingLanguage): number {
     let complexity = 1; // Base complexity
-    
+
     // Count decision points based on language
     const patterns = this.getComplexityPatterns(language);
-    
+
     for (const pattern of patterns) {
       const matches = code.match(new RegExp(pattern, 'g'));
       if (matches) {
         complexity += matches.length;
       }
     }
-    
+
     return complexity;
   }
 
@@ -628,7 +672,7 @@ export class EvaluationService {
    */
   private getComplexityPatterns(language: ProgrammingLanguage): string[] {
     const commonPatterns = [
-      '\\bif\\b', '\\belse\\b', '\\bwhile\\b', '\\bfor\\b', 
+      '\\bif\\b', '\\belse\\b', '\\bwhile\\b', '\\bfor\\b',
       '\\bswitch\\b', '\\bcase\\b', '\\bcatch\\b', '\\b&&\\b', '\\b\\|\\|\\b'
     ];
 
@@ -651,28 +695,28 @@ export class EvaluationService {
   private calculateCognitiveComplexity(code: string, language: ProgrammingLanguage): number {
     let complexity = 0;
     let nestingLevel = 0;
-    
+
     const lines = code.split('\n');
-    
+
     for (const line of lines) {
       const trimmedLine = line.trim();
-      
+
       // Increment nesting for blocks
       if (this.isBlockStart(trimmedLine, language)) {
         nestingLevel++;
       }
-      
+
       // Add complexity for control structures
       if (this.isControlStructure(trimmedLine, language)) {
         complexity += 1 + nestingLevel;
       }
-      
+
       // Decrement nesting for block ends
       if (this.isBlockEnd(trimmedLine, language)) {
         nestingLevel = Math.max(0, nestingLevel - 1);
       }
     }
-    
+
     return complexity;
   }
 
@@ -724,12 +768,12 @@ export class EvaluationService {
     const loc = code.split('\n').length;
     const complexity = this.calculateCyclomaticComplexity(code, language);
     const halsteadVolume = this.calculateHalsteadVolume(code, language);
-    
+
     // Simplified maintainability index calculation
-    const mi = Math.max(0, 
+    const mi = Math.max(0,
       171 - 5.2 * Math.log(halsteadVolume) - 0.23 * complexity - 16.2 * Math.log(loc)
     );
-    
+
     return Math.round(mi);
   }
 
@@ -739,15 +783,15 @@ export class EvaluationService {
   private calculateHalsteadVolume(code: string, language: ProgrammingLanguage): number {
     const operators = this.countOperators(code, language);
     const operands = this.countOperands(code, language);
-    
+
     const n1 = operators.unique;
     const n2 = operands.unique;
     const N1 = operators.total;
     const N2 = operands.total;
-    
+
     const vocabulary = n1 + n2;
     const length = N1 + N2;
-    
+
     return length * Math.log2(vocabulary || 1);
   }
 
@@ -759,10 +803,10 @@ export class EvaluationService {
       '\\+', '-', '\\*', '/', '%', '=', '==', '!=', '<', '>', '<=', '>=',
       '&&', '\\|\\|', '!', '&', '\\|', '\\^', '<<', '>>', '\\?', ':'
     ];
-    
+
     const operators = new Set<string>();
     let totalCount = 0;
-    
+
     for (const pattern of operatorPatterns) {
       const matches = code.match(new RegExp(pattern, 'g'));
       if (matches) {
@@ -770,7 +814,7 @@ export class EvaluationService {
         totalCount += matches.length;
       }
     }
-    
+
     return { unique: operators.size, total: totalCount };
   }
 
@@ -782,19 +826,19 @@ export class EvaluationService {
     const identifierPattern = /\b[a-zA-Z_][a-zA-Z0-9_]*\b/g;
     const numberPattern = /\b\d+(\.\d+)?\b/g;
     const stringPattern = /["']([^"'\\]|\\.)*["']/g;
-    
+
     const operands = new Set<string>();
     let totalCount = 0;
-    
+
     const identifiers = code.match(identifierPattern) || [];
     const numbers = code.match(numberPattern) || [];
     const strings = code.match(stringPattern) || [];
-    
+
     [...identifiers, ...numbers, ...strings].forEach(operand => {
       operands.add(operand);
       totalCount++;
     });
-    
+
     return { unique: operands.size, total: totalCount };
   }
 
@@ -804,18 +848,18 @@ export class EvaluationService {
   private findDuplicatedLines(code: string): number {
     const lines = code.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const lineCount = new Map<string, number>();
-    
+
     lines.forEach(line => {
       lineCount.set(line, (lineCount.get(line) || 0) + 1);
     });
-    
+
     let duplicatedLines = 0;
     lineCount.forEach((count, line) => {
       if (count > 1) {
         duplicatedLines += count - 1;
       }
     });
-    
+
     return duplicatedLines;
   }
 
@@ -824,7 +868,7 @@ export class EvaluationService {
    */
   private detectCodeSmells(code: string, language: ProgrammingLanguage): string[] {
     const smells: string[] = [];
-    
+
     // Long method
     const methods = this.extractMethods(code, language);
     methods.forEach(method => {
@@ -832,7 +876,7 @@ export class EvaluationService {
         smells.push('Long Method');
       }
     });
-    
+
     // Large class (for OOP languages)
     if (this.isOOPLanguage(language)) {
       const classes = this.extractClasses(code, language);
@@ -842,19 +886,19 @@ export class EvaluationService {
         }
       });
     }
-    
+
     // Magic numbers
     const magicNumbers = code.match(/\b\d{2,}\b/g);
     if (magicNumbers && magicNumbers.length > 3) {
       smells.push('Magic Numbers');
     }
-    
+
     // Dead code (unused variables/functions)
     const deadCode = this.detectDeadCode(code, language);
     if (deadCode.length > 0) {
       smells.push('Dead Code');
     }
-    
+
     return [...new Set(smells)];
   }
 
@@ -864,13 +908,13 @@ export class EvaluationService {
   private extractMethods(code: string, language: ProgrammingLanguage): Array<{ name: string; lines: number }> {
     const methods: Array<{ name: string; lines: number }> = [];
     const lines = code.split('\n');
-    
+
     let currentMethod: { name: string; startLine: number } | null = null;
     let braceCount = 0;
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
+
       // Detect method start (simplified)
       if (this.isMethodDeclaration(line, language)) {
         if (currentMethod) {
@@ -885,11 +929,11 @@ export class EvaluationService {
         };
         braceCount = 0;
       }
-      
+
       // Count braces for method boundaries
       braceCount += (line.match(/{/g) || []).length;
       braceCount -= (line.match(/}/g) || []).length;
-      
+
       // Method end
       if (currentMethod && braceCount === 0 && line.includes('}')) {
         methods.push({
@@ -899,7 +943,7 @@ export class EvaluationService {
         currentMethod = null;
       }
     }
-    
+
     return methods;
   }
 
@@ -946,13 +990,13 @@ export class EvaluationService {
   private extractClasses(code: string, language: ProgrammingLanguage): Array<{ name: string; lines: number }> {
     const classes: Array<{ name: string; lines: number }> = [];
     const lines = code.split('\n');
-    
+
     let currentClass: { name: string; startLine: number } | null = null;
     let braceCount = 0;
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
+
       if (this.isClassDeclaration(line, language)) {
         if (currentClass) {
           classes.push({
@@ -966,10 +1010,10 @@ export class EvaluationService {
         };
         braceCount = 0;
       }
-      
+
       braceCount += (line.match(/{/g) || []).length;
       braceCount -= (line.match(/}/g) || []).length;
-      
+
       if (currentClass && braceCount === 0 && line.includes('}')) {
         classes.push({
           name: currentClass.name,
@@ -978,7 +1022,7 @@ export class EvaluationService {
         currentClass = null;
       }
     }
-    
+
     return classes;
   }
 
@@ -1025,17 +1069,17 @@ export class EvaluationService {
   private detectDeadCode(code: string, language: ProgrammingLanguage): string[] {
     // Simplified dead code detection
     const deadCode: string[] = [];
-    
+
     // Find declared but unused variables
     const variables = this.extractVariableDeclarations(code, language);
     const usages = this.extractVariableUsages(code, language);
-    
+
     variables.forEach(variable => {
       if (!usages.includes(variable)) {
         deadCode.push(variable);
       }
     });
-    
+
     return deadCode;
   }
 
@@ -1044,7 +1088,7 @@ export class EvaluationService {
    */
   private extractVariableDeclarations(code: string, language: ProgrammingLanguage): string[] {
     const variables: string[] = [];
-    
+
     switch (language) {
       case ProgrammingLanguage.JAVASCRIPT:
       case ProgrammingLanguage.TYPESCRIPT:
@@ -1066,7 +1110,7 @@ export class EvaluationService {
         }
         break;
     }
-    
+
     return variables;
   }
 
@@ -1076,13 +1120,13 @@ export class EvaluationService {
   private extractVariableUsages(code: string, language: ProgrammingLanguage): string[] {
     const usages: string[] = [];
     const identifiers = code.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
-    
+
     identifiers.forEach(identifier => {
       if (!this.isKeyword(identifier, language)) {
         usages.push(identifier);
       }
     });
-    
+
     return [...new Set(usages)];
   }
 
@@ -1117,7 +1161,7 @@ export class EvaluationService {
         'fn', 'let', 'mut', 'if', 'else', 'for', 'while', 'return', 'struct', 'enum'
       ]
     };
-    
+
     return keywords[language]?.includes(identifier) || false;
   }
 
@@ -1126,21 +1170,21 @@ export class EvaluationService {
    */
   private checkOperatorSpacing(code: string): number {
     let issues = 0;
-    
+
     // Check for operators without proper spacing
     const operatorPatterns = [
       /\w[+\-*/=<>!]=?\w/g,  // No space around operators
       /\w&&\w/g,             // No space around &&
       /\w\|\|\w/g,           // No space around ||
     ];
-    
+
     operatorPatterns.forEach(pattern => {
       const matches = code.match(pattern);
       if (matches) {
         issues += matches.length;
       }
     });
-    
+
     return issues;
   }
 
@@ -1162,7 +1206,7 @@ export class EvaluationService {
    */
   private findSyntaxErrors(code: string, language: ProgrammingLanguage): string[] {
     const errors: string[] = [];
-    
+
     // Basic syntax checks based on language
     switch (language) {
       case ProgrammingLanguage.JAVASCRIPT:
@@ -1172,7 +1216,7 @@ export class EvaluationService {
         if (braceCount !== 0) {
           errors.push('Unmatched braces detected');
         }
-        
+
         // Check for unmatched parentheses
         const parenCount = (code.match(/\(/g) || []).length - (code.match(/\)/g) || []).length;
         if (parenCount !== 0) {
@@ -1194,40 +1238,40 @@ export class EvaluationService {
         if (doubleQuoteCount % 2 !== 0) {
           errors.push('Unclosed double quote string detected');
         }
-        
+
         // Check for missing semicolons (less strict - only for obvious cases)
         const lines = code.split('\n');
         lines.forEach((line, index) => {
           const trimmed = line.trim();
-          if (trimmed.length > 0 && 
-              !trimmed.endsWith(';') && 
-              !trimmed.endsWith('{') && 
-              !trimmed.endsWith('}') &&
-              !trimmed.endsWith(',') &&
-              !trimmed.startsWith('//') &&
-              !trimmed.startsWith('/*') &&
-              !trimmed.includes('if') &&
-              !trimmed.includes('else') &&
-              !trimmed.includes('for') &&
-              !trimmed.includes('while') &&
-              !trimmed.includes('function') &&
-              !trimmed.includes('class') &&
-              !trimmed.includes('const') &&
-              !trimmed.includes('let') &&
-              !trimmed.includes('var') &&
-              (trimmed.includes('return ') && !trimmed.startsWith('return'))) {
+          if (trimmed.length > 0 &&
+            !trimmed.endsWith(';') &&
+            !trimmed.endsWith('{') &&
+            !trimmed.endsWith('}') &&
+            !trimmed.endsWith(',') &&
+            !trimmed.startsWith('//') &&
+            !trimmed.startsWith('/*') &&
+            !trimmed.includes('if') &&
+            !trimmed.includes('else') &&
+            !trimmed.includes('for') &&
+            !trimmed.includes('while') &&
+            !trimmed.includes('function') &&
+            !trimmed.includes('class') &&
+            !trimmed.includes('const') &&
+            !trimmed.includes('let') &&
+            !trimmed.includes('var') &&
+            (trimmed.includes('return ') && !trimmed.startsWith('return'))) {
             errors.push(`Missing semicolon at line ${index + 1}`);
           }
         });
         break;
-        
+
       case ProgrammingLanguage.PYTHON:
         // Check for indentation issues
         const pythonLines = code.split('\n');
         let expectedIndent = 0;
         pythonLines.forEach((line, index) => {
           if (line.trim().length === 0) return;
-          
+
           const actualIndent = line.length - line.trimStart().length;
           if (line.trim().endsWith(':')) {
             expectedIndent += 4;
@@ -1237,7 +1281,7 @@ export class EvaluationService {
         });
         break;
     }
-    
+
     return errors;
   }
 
@@ -1246,38 +1290,38 @@ export class EvaluationService {
    */
   private findLogicErrors(code: string, language: ProgrammingLanguage): string[] {
     const errors: string[] = [];
-    
+
     // Check for common logic errors
-    
+
     // Assignment in condition
     if (code.match(/if\s*\([^)]*=(?!=)[^)]*\)/)) {
       errors.push('Assignment in conditional statement (possible typo for ==)');
     }
-    
+
     // Unreachable code after return
     const lines = code.split('\n');
     for (let i = 0; i < lines.length - 1; i++) {
       const currentLine = lines[i].trim();
       const nextLine = lines[i + 1].trim();
-      
-      if (currentLine.includes('return') && 
-          nextLine.length > 0 && 
-          !nextLine.startsWith('}') && 
-          !nextLine.startsWith('//')) {
+
+      if (currentLine.includes('return') &&
+        nextLine.length > 0 &&
+        !nextLine.startsWith('}') &&
+        !nextLine.startsWith('//')) {
         errors.push(`Unreachable code after return at line ${i + 2}`);
       }
     }
-    
+
     // Infinite loops (basic detection)
     if (code.match(/while\s*\(\s*true\s*\)/) && !code.includes('break')) {
       errors.push('Potential infinite loop detected');
     }
-    
+
     // Division by zero checks
     if (code.match(/\/\s*0\b/)) {
       errors.push('Division by zero detected');
     }
-    
+
     return errors;
   }
 
@@ -1286,35 +1330,35 @@ export class EvaluationService {
    */
   private findPotentialBugs(code: string, language: ProgrammingLanguage): string[] {
     const bugs: string[] = [];
-    
+
     // Null pointer dereference potential - improved detection
     const dotAccesses = (code.match(/\w+\.\w+/g) || []).length;
     if (dotAccesses > 0) {
       const nullChecks = code.match(/if\s*\([^)]*(?:null|undefined)[^)]*\)|(?:null|undefined)\s*[!=]=|[!=]==?\s*(?:null|undefined)|\?\./g);
       const totalChecks = nullChecks?.length || 0;
-      
+
       if (dotAccesses > totalChecks + 2) {
         bugs.push('Potential null/undefined reference without proper checks');
       }
     }
-    
+
     // Array index out of bounds
     if (code.includes('[') && !code.includes('.length')) {
       bugs.push('Array access without bounds checking');
     }
-    
+
     // Resource leaks (file handles, connections)
     if (language === ProgrammingLanguage.JAVASCRIPT || language === ProgrammingLanguage.TYPESCRIPT) {
       if (code.includes('new ') && !code.includes('finally') && !code.includes('catch')) {
         bugs.push('Resource allocation without proper cleanup');
       }
     }
-    
+
     // Type coercion issues
     if (code.includes('==') && !code.includes('===')) {
       bugs.push('Use of loose equality (==) instead of strict equality (===)');
     }
-    
+
     return bugs;
   }
 
@@ -1323,40 +1367,40 @@ export class EvaluationService {
    */
   private findSecurityIssues(code: string, language: ProgrammingLanguage): string[] {
     const issues: string[] = [];
-    
+
     // SQL injection potential - more specific detection
-    if ((code.includes('SELECT') || code.includes('INSERT') || code.includes('UPDATE')) && 
-        (code.includes('+') || code.includes('${') || code.includes('`'))) {
+    if ((code.includes('SELECT') || code.includes('INSERT') || code.includes('UPDATE')) &&
+      (code.includes('+') || code.includes('${') || code.includes('`'))) {
       if (code.match(/["']\s*\+\s*\w+|`.*\$\{.*\}.*`/)) {
         issues.push('Potential SQL injection vulnerability (string concatenation in query)');
       }
     }
-    
+
     // XSS potential - more specific
     if (code.includes('innerHTML') && !code.includes('textContent')) {
       issues.push('Potential XSS vulnerability (unsafe DOM manipulation)');
     }
-    
+
     if (code.includes('document.write')) {
       issues.push('Potential XSS vulnerability (unsafe DOM manipulation)');
     }
-    
+
     // Hardcoded credentials - more specific patterns
     if (code.match(/(?:password|apikey|secret|token)\s*[=:]\s*["'][^"']{8,}["']/i)) {
       issues.push('Hardcoded credentials detected');
     }
-    
+
     // Eval usage
     if (code.includes('eval(')) {
       issues.push('Use of eval() function poses security risk');
     }
-    
+
     // Insecure random number generation - more specific
-    if (code.includes('Math.random()') && 
-        (code.includes('password') || code.includes('token') || code.includes('secret'))) {
+    if (code.includes('Math.random()') &&
+      (code.includes('password') || code.includes('token') || code.includes('secret'))) {
       issues.push('Insecure random number generation for security purposes');
     }
-    
+
     return issues;
   }
 
@@ -1365,18 +1409,18 @@ export class EvaluationService {
    */
   private findPerformanceIssues(code: string, language: ProgrammingLanguage): string[] {
     const issues: string[] = [];
-    
+
     // Nested loops
     const nestedLoopPattern = /for\s*\([^}]*for\s*\(/g;
     if (nestedLoopPattern.test(code)) {
       issues.push('Nested loops detected - consider optimization');
     }
-    
+
     // String concatenation in loops
     if (code.includes('for') && code.includes('+') && code.includes('string')) {
       issues.push('String concatenation in loop - consider using array join or StringBuilder');
     }
-    
+
     // Inefficient DOM queries
     if (code.includes('getElementById') || code.includes('querySelector')) {
       const domQueries = (code.match(/getElementById|querySelector/g) || []).length;
@@ -1384,12 +1428,12 @@ export class EvaluationService {
         issues.push('Multiple DOM queries - consider caching elements');
       }
     }
-    
+
     // Large object creation in loops
     if (code.includes('for') && code.includes('new ')) {
       issues.push('Object creation inside loop - consider object pooling');
     }
-    
+
     return issues;
   }
 
@@ -1410,14 +1454,14 @@ export class EvaluationService {
     // Check if requirement is testable
     if (requirement.testable) {
       // Run relevant test cases
-      const relevantTests = testCases.filter(test => 
+      const relevantTests = testCases.filter(test =>
         test.description.toLowerCase().includes(requirement.description.toLowerCase().split(' ')[0])
       );
-      
+
       if (relevantTests.length > 0) {
         const testResults = await this.runTestCases(code, relevantTests, language);
         const passedTests = testResults.filter(result => result.passed).length;
-        
+
         if (passedTests === relevantTests.length) {
           satisfied = true;
           confidence = 0.9;
@@ -1432,7 +1476,7 @@ export class EvaluationService {
     // Analyze code for requirement keywords
     const keywordAnalysis = this.analyzeRequirementKeywords(code, requirement, language);
     confidence = Math.max(confidence, keywordAnalysis.confidence);
-    
+
     if (keywordAnalysis.found) {
       evidence.push(...keywordAnalysis.evidence);
       satisfied = satisfied || keywordAnalysis.satisfied;
@@ -1469,7 +1513,7 @@ export class EvaluationService {
     language: ProgrammingLanguage
   ): Promise<Array<{ testId: string; passed: boolean; output?: any; error?: string }>> {
     const results: Array<{ testId: string; passed: boolean; output?: any; error?: string }> = [];
-    
+
     for (const testCase of testCases) {
       try {
         // This is a simplified test runner - in a real implementation,
@@ -1488,7 +1532,7 @@ export class EvaluationService {
         });
       }
     }
-    
+
     return results;
   }
 
@@ -1501,7 +1545,7 @@ export class EvaluationService {
     // 2. Inject the test input
     // 3. Execute the code
     // 4. Capture the output
-    
+
     // For now, return a mock result based on the test case
     return testCase.expectedOutput;
   }
@@ -1513,11 +1557,11 @@ export class EvaluationService {
     if (typeof actual !== typeof expected) {
       return false;
     }
-    
+
     if (typeof actual === 'object' && actual !== null && expected !== null) {
       return JSON.stringify(actual) === JSON.stringify(expected);
     }
-    
+
     return actual === expected;
   }
 
@@ -1540,16 +1584,16 @@ export class EvaluationService {
 
     // Extract key terms from requirement
     const keyTerms = this.extractKeyTerms(description);
-    
+
     for (const term of keyTerms) {
       const termRegex = new RegExp(term, 'gi');
       const matches = code.match(termRegex);
-      
+
       if (matches) {
         found = true;
         confidence += 0.2;
         evidence.push(`Found implementation of "${term}"`);
-        
+
         // Find the lines where the term appears
         codeLines.forEach((line, index) => {
           if (termRegex.test(line)) {
@@ -1564,16 +1608,16 @@ export class EvaluationService {
     // Check for specific requirement patterns
     if (description.includes('refactor')) {
       const refactoringIndicators = ['function', 'class', 'const', 'let', 'var'];
-      const foundIndicators = refactoringIndicators.filter(indicator => 
+      const foundIndicators = refactoringIndicators.filter(indicator =>
         code.toLowerCase().includes(indicator)
       );
-      
+
       if (foundIndicators.length > 0) {
         satisfied = true;
         confidence += 0.4;
         evidence.push(`Code shows refactoring patterns: ${foundIndicators.join(', ')}`);
       }
-      
+
       // Give some credit for any structured code
       if (code.trim().length > 20) {
         confidence += 0.4;
@@ -1600,10 +1644,10 @@ export class EvaluationService {
 
     if (description.includes('test')) {
       const testIndicators = ['test', 'expect', 'assert', 'describe', 'it', 'should', 'spec'];
-      const foundTests = testIndicators.filter(indicator => 
+      const foundTests = testIndicators.filter(indicator =>
         code.toLowerCase().includes(indicator)
       );
-      
+
       if (foundTests.length > 0) {
         satisfied = true;
         confidence += 0.5;
@@ -1622,10 +1666,10 @@ export class EvaluationService {
     if (description.includes('bug') || description.includes('fix')) {
       // Look for error handling patterns
       const errorHandling = ['try', 'catch', 'throw', 'error'];
-      const foundHandling = errorHandling.filter(pattern => 
+      const foundHandling = errorHandling.filter(pattern =>
         code.toLowerCase().includes(pattern)
       );
-      
+
       if (foundHandling.length > 0) {
         satisfied = true;
         confidence += 0.3;
@@ -1647,27 +1691,27 @@ export class EvaluationService {
    */
   private extractKeyTerms(description: string): string[] {
     const terms: string[] = [];
-    
+
     // Common programming terms
     const programmingTerms = [
       'function', 'class', 'method', 'variable', 'array', 'object',
       'loop', 'condition', 'return', 'parameter', 'argument'
     ];
-    
+
     // Action terms
     const actionTerms = [
       'create', 'implement', 'add', 'remove', 'update', 'modify',
       'refactor', 'optimize', 'fix', 'test', 'validate'
     ];
-    
+
     const allTerms = [...programmingTerms, ...actionTerms];
-    
+
     for (const term of allTerms) {
       if (description.includes(term)) {
         terms.push(term);
       }
     }
-    
+
     return terms;
   }
 
@@ -1680,7 +1724,7 @@ export class EvaluationService {
     language: ProgrammingLanguage
   ): { satisfied: boolean; evidence: string; issue: string } {
     const criteriaLower = criteria.toLowerCase();
-    
+
     // Check for best practices
     if (criteriaLower.includes('best practices')) {
       const bestPracticeScore = this.evaluateLanguageSpecificQuality(code, language);
@@ -1690,7 +1734,7 @@ export class EvaluationService {
         issue: bestPracticeScore <= 70 ? 'Code does not follow best practices' : ''
       };
     }
-    
+
     // Check for documentation
     if (criteriaLower.includes('documented') || criteriaLower.includes('comments')) {
       const commentScore = this.evaluateComments(code, language);
@@ -1700,27 +1744,27 @@ export class EvaluationService {
         issue: commentScore <= 60 ? 'Code lacks sufficient documentation' : ''
       };
     }
-    
+
     // Check for test coverage
     if (criteriaLower.includes('test') && criteriaLower.includes('pass')) {
-      const hasTests = code.toLowerCase().includes('test') || 
-                      code.toLowerCase().includes('expect') ||
-                      code.toLowerCase().includes('assert');
+      const hasTests = code.toLowerCase().includes('test') ||
+        code.toLowerCase().includes('expect') ||
+        code.toLowerCase().includes('assert');
       return {
         satisfied: hasTests,
         evidence: hasTests ? 'Test cases are present' : '',
         issue: !hasTests ? 'No test cases found' : ''
       };
     }
-    
+
     // Default check - look for keywords in code
     const keywords = criteriaLower.match(/\b\w+\b/g) || [];
-    const foundKeywords = keywords.filter(keyword => 
+    const foundKeywords = keywords.filter(keyword =>
       code.toLowerCase().includes(keyword)
     );
-    
+
     const satisfied = foundKeywords.length > keywords.length * 0.5;
-    
+
     return {
       satisfied,
       evidence: satisfied ? `Found relevant implementation: ${foundKeywords.join(', ')}` : '',
@@ -1733,19 +1777,19 @@ export class EvaluationService {
    */
   private checkIndentationConsistency(lines: string[]): number {
     let issues = 0;
-    let expectedIndent = 0;
+    const expectedIndent = 0;
     let indentType: 'spaces' | 'tabs' | null = null;
-    
+
     for (const line of lines) {
       if (line.trim().length === 0) continue;
-      
+
       const leadingWhitespace = line.match(/^(\s*)/)?.[1] || '';
-      
+
       // Determine indent type from first indented line
       if (indentType === null && leadingWhitespace.length > 0) {
         indentType = leadingWhitespace.includes('\t') ? 'tabs' : 'spaces';
       }
-      
+
       // Check for mixed indentation
       if (indentType === 'spaces' && leadingWhitespace.includes('\t')) {
         issues++;
@@ -1753,7 +1797,7 @@ export class EvaluationService {
         issues++;
       }
     }
-    
+
     return issues;
   }
 
@@ -1762,15 +1806,15 @@ export class EvaluationService {
    */
   private evaluateNamingConventions(code: string, language: ProgrammingLanguage): number {
     let score = 100;
-    
+
     // Extract identifiers
     const identifiers = code.match(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g) || [];
     const uniqueIdentifiers = [...new Set(identifiers)];
-    
+
     for (const identifier of uniqueIdentifiers) {
       // Skip keywords
       if (this.isKeyword(identifier, language)) continue;
-      
+
       // Check naming conventions based on language
       switch (language) {
         case ProgrammingLanguage.JAVASCRIPT:
@@ -1793,18 +1837,18 @@ export class EvaluationService {
           }
           break;
       }
-      
+
       // Check for meaningful names (avoid single letters except for loops)
       if (identifier.length === 1 && !['i', 'j', 'k', 'x', 'y', 'z'].includes(identifier)) {
         score -= 3;
       }
-      
+
       // Check for abbreviations
       if (identifier.length < 3 && identifier.length > 1) {
         score -= 1;
       }
     }
-    
+
     return Math.max(0, score);
   }
 
@@ -1836,14 +1880,14 @@ export class EvaluationService {
     const lines = code.split('\n');
     const codeLines = lines.filter(line => line.trim().length > 0);
     const commentLines = this.getCommentLines(lines, language);
-    
+
     if (codeLines.length === 0) return 0;
-    
+
     const commentRatio = commentLines.length / codeLines.length;
-    
+
     // Ideal comment ratio is around 10-20%
     let score = 100;
-    
+
     if (commentRatio < 0.05) {
       score = 30; // Very few comments
     } else if (commentRatio < 0.1) {
@@ -1851,18 +1895,18 @@ export class EvaluationService {
     } else if (commentRatio > 0.3) {
       score = 70; // Too many comments
     }
-    
+
     // Check for function documentation
     const functions = this.extractMethods(code, language);
-    const documentedFunctions = functions.filter(func => 
+    const documentedFunctions = functions.filter(func =>
       this.isFunctionDocumented(func.name, code, language)
     );
-    
+
     if (functions.length > 0) {
       const docRatio = documentedFunctions.length / functions.length;
       score = (score + docRatio * 100) / 2;
     }
-    
+
     return Math.round(score);
   }
 
@@ -1871,10 +1915,10 @@ export class EvaluationService {
    */
   private getCommentLines(lines: string[], language: ProgrammingLanguage): string[] {
     const commentLines: string[] = [];
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
-      
+
       switch (language) {
         case ProgrammingLanguage.JAVASCRIPT:
         case ProgrammingLanguage.TYPESCRIPT:
@@ -1892,7 +1936,7 @@ export class EvaluationService {
           break;
       }
     }
-    
+
     return commentLines;
   }
 
@@ -1901,15 +1945,15 @@ export class EvaluationService {
    */
   private isFunctionDocumented(functionName: string, code: string, language: ProgrammingLanguage): boolean {
     const lines = code.split('\n');
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       if (line.includes(functionName) && this.isMethodDeclaration(line, language)) {
         // Check previous lines for documentation
         for (let j = Math.max(0, i - 5); j < i; j++) {
           const prevLine = lines[j].trim();
-          
+
           switch (language) {
             case ProgrammingLanguage.JAVASCRIPT:
             case ProgrammingLanguage.TYPESCRIPT:
@@ -1924,7 +1968,7 @@ export class EvaluationService {
               break;
           }
         }
-        
+
         // Check next lines for documentation (Python docstrings)
         if (language === ProgrammingLanguage.PYTHON) {
           for (let j = i + 1; j < Math.min(lines.length, i + 3); j++) {
@@ -1936,7 +1980,7 @@ export class EvaluationService {
         }
       }
     }
-    
+
     return false;
   }
 
@@ -1945,7 +1989,7 @@ export class EvaluationService {
    */
   private evaluateLanguageSpecificQuality(code: string, language: ProgrammingLanguage): number {
     let score = 100;
-    
+
     switch (language) {
       case ProgrammingLanguage.JAVASCRIPT:
       case ProgrammingLanguage.TYPESCRIPT:
@@ -1953,57 +1997,57 @@ export class EvaluationService {
         if (!code.includes("'use strict'") && !code.includes('"use strict"')) {
           score -= 10;
         }
-        
+
         // Check for proper variable declarations
         if (code.includes('var ')) {
           score -= 15; // Prefer let/const over var
         }
-        
+
         // Check for arrow functions vs function declarations
         const arrowFunctions = (code.match(/=>\s*{?/g) || []).length;
         const regularFunctions = (code.match(/function\s+\w+/g) || []).length;
-        
+
         if (regularFunctions > arrowFunctions && arrowFunctions > 0) {
           score += 5; // Good mix of function types
         }
-        
+
         break;
-        
+
       case ProgrammingLanguage.PYTHON:
         // Check for PEP 8 compliance
         const lines = code.split('\n');
-        
+
         // Check line length
         const longLines = lines.filter(line => line.length > 79);
         score -= Math.min(20, longLines.length * 2);
-        
+
         // Check for proper imports
         const imports = lines.filter(line => line.trim().startsWith('import') || line.trim().startsWith('from'));
         const importsAtTop = imports.every((_, index) => index < 10);
-        
+
         if (!importsAtTop) {
           score -= 10;
         }
-        
+
         break;
-        
+
       case ProgrammingLanguage.JAVA:
         // Check for proper class structure
         if (!code.includes('public class')) {
           score -= 15;
         }
-        
+
         // Check for proper method visibility
         const publicMethods = (code.match(/public\s+\w+\s+\w+\s*\(/g) || []).length;
         const privateMethods = (code.match(/private\s+\w+\s+\w+\s*\(/g) || []).length;
-        
+
         if (privateMethods === 0 && publicMethods > 1) {
           score -= 10; // Should have some private methods
         }
-        
+
         break;
     }
-    
+
     return Math.max(0, score);
   }
 
@@ -2012,40 +2056,40 @@ export class EvaluationService {
    */
   private evaluateDesignPatterns(code: string, language: ProgrammingLanguage): number {
     let score = 70; // Base score
-    
+
     // Check for common design patterns
-    
+
     // Singleton pattern
     if (code.includes('getInstance') || code.includes('instance')) {
       score += 10;
     }
-    
+
     // Factory pattern
     if (code.includes('create') && code.includes('new ')) {
       score += 5;
     }
-    
+
     // Observer pattern
     if (code.includes('addEventListener') || code.includes('subscribe') || code.includes('notify')) {
       score += 10;
     }
-    
+
     // Strategy pattern
     if (code.includes('interface') || code.includes('abstract')) {
       score += 8;
     }
-    
+
     // Proper error handling
     if (code.includes('try') && code.includes('catch')) {
       score += 15;
     }
-    
+
     // Separation of concerns
     const classes = this.extractClasses(code, language);
     if (classes.length > 1) {
       score += 10;
     }
-    
+
     return Math.min(100, score);
   }
 
@@ -2053,12 +2097,12 @@ export class EvaluationService {
    * Calculate overall score with weighted criteria
    */
   private calculateOverallScore(scores: EvaluationCriteria): number {
-    const weightedScore = 
+    const weightedScore =
       scores.readability * this.WEIGHTS.readability +
       scores.quality * this.WEIGHTS.quality +
       scores.defects * this.WEIGHTS.defects +
       scores.requirements * this.WEIGHTS.requirements;
-    
+
     return Math.round(weightedScore);
   }
 
@@ -2073,11 +2117,12 @@ export class EvaluationService {
       defects: 70,
       requirements: 80
     };
-    
+
     const meetsThresholds = Object.entries(minimumThresholds).every(([category, threshold]) => {
-      return scores[category as keyof EvaluationCriteria] >= threshold;
+      const categoryScore = scores?.[category as keyof EvaluationCriteria];
+      return categoryScore !== undefined && categoryScore >= threshold;
     });
-    
+
     return meetsThresholds && overallScore >= 70;
   }
 
@@ -2109,7 +2154,7 @@ export class EvaluationService {
   private generateRequirementsMessage(score: number, verifications: RequirementVerification[]): string {
     const satisfiedCount = verifications.filter(v => v.satisfied).length;
     const totalCount = verifications.length;
-    
+
     if (score >= 90) return `Excellent! ${satisfiedCount}/${totalCount} requirements fully satisfied.`;
     if (score >= 80) return `Good progress! ${satisfiedCount}/${totalCount} requirements satisfied.`;
     if (score >= 70) return `Most requirements met, but ${totalCount - satisfiedCount} still need work.`;
@@ -2120,7 +2165,7 @@ export class EvaluationService {
   // Code example generation methods
   private generateReadabilityExamples(code: string, language: ProgrammingLanguage, issues: string[]): Array<{ before: string; after: string; explanation: string }> {
     const examples: Array<{ before: string; after: string; explanation: string }> = [];
-    
+
     // Example for long lines
     if (issues.some(issue => issue.includes('120 characters'))) {
       examples.push({
@@ -2135,7 +2180,7 @@ export class EvaluationService {
         explanation: 'Break long lines into multiple lines for better readability'
       });
     }
-    
+
     // Example for naming conventions
     if (issues.some(issue => issue.includes('unclear names'))) {
       examples.push({
@@ -2144,13 +2189,13 @@ export class EvaluationService {
         explanation: 'Use descriptive variable names that clearly indicate their purpose'
       });
     }
-    
+
     return examples;
   }
 
   private generateQualityExamples(code: string, language: ProgrammingLanguage, issues: string[]): Array<{ before: string; after: string; explanation: string }> {
     const examples: Array<{ before: string; after: string; explanation: string }> = [];
-    
+
     // Example for high complexity
     if (issues.some(issue => issue.includes('complexity'))) {
       examples.push({
@@ -2178,13 +2223,13 @@ function processItem(item) {
         explanation: 'Break down complex functions into smaller, focused functions'
       });
     }
-    
+
     return examples;
   }
 
   private generateDefectExamples(code: string, language: ProgrammingLanguage, defects: DefectAnalysis): Array<{ before: string; after: string; explanation: string }> {
     const examples: Array<{ before: string; after: string; explanation: string }> = [];
-    
+
     // Example for null checks
     if (defects.potentialBugs.some(bug => bug.includes('null'))) {
       examples.push({
@@ -2193,7 +2238,7 @@ function processItem(item) {
         explanation: 'Add null checks to prevent runtime errors'
       });
     }
-    
+
     // Example for security issues
     if (defects.securityIssues.length > 0) {
       examples.push({
@@ -2202,15 +2247,15 @@ function processItem(item) {
         explanation: 'Use textContent instead of innerHTML to prevent XSS attacks'
       });
     }
-    
+
     return examples;
   }
 
   private generateRequirementExamples(code: string, language: ProgrammingLanguage, verifications: RequirementVerification[]): Array<{ before: string; after: string; explanation: string }> {
     const examples: Array<{ before: string; after: string; explanation: string }> = [];
-    
+
     const unsatisfiedRequirements = verifications.filter(v => !v.satisfied);
-    
+
     if (unsatisfiedRequirements.length > 0) {
       examples.push({
         before: '// Missing implementation',
@@ -2218,7 +2263,7 @@ function processItem(item) {
         explanation: 'Ensure all requirements are properly implemented and tested'
       });
     }
-    
+
     return examples;
   }
 }

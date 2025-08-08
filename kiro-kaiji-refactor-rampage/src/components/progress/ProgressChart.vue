@@ -98,7 +98,7 @@
         </div>
         <div class="flex items-center space-x-2">
           <div class="w-3 h-3 rounded-full bg-red-500"></div>
-          <span>Needs Work (<50)</span>
+          <span>Needs Work (&lt;50)</span>
         </div>
       </div>
       

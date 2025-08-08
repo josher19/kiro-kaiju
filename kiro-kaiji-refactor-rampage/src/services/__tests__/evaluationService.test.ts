@@ -94,7 +94,9 @@ describe('EvaluationService', () => {
         avatar: 'complexasaur.png',
         flavorText: 'Simplify the tangled mess!',
         codePatterns: [],
-        difficultyModifiers: []
+        difficultyModifiers: [],
+        specialAbilities: ['Complex nesting', 'Confusing logic'],
+        weaknesses: ['Refactoring', 'Clean code principles']
       },
       config: {
         language: ProgrammingLanguage.JAVASCRIPT,

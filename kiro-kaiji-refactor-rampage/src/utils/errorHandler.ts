@@ -128,7 +128,7 @@ export class ErrorHandler {
       } catch (error) {
         lastError = error as Error;
         
-        const appError = this.createAppError(error, { 
+        const appError = this.createAppError(error as Error, { 
           ...context, 
           attempt: attempt + 1,
           maxRetries: maxRetries + 1
@@ -136,7 +136,7 @@ export class ErrorHandler {
 
         // Don't retry on the last attempt or if not retryable
         if (attempt === maxRetries || !appError.retryable) {
-          this.handle(appError, context, { ...options, enableRetry: false });
+          this.handle(appError.originalError || new Error(appError.message), context, { ...options, enableRetry: false });
           throw appError;
         }
 
@@ -438,7 +438,7 @@ export class ErrorHandler {
   private async reportToService(error: AppError): Promise<void> {
     try {
       // Only report in production and cloud mode
-      if (process.env.NODE_ENV !== 'production') {
+      if (typeof window !== 'undefined' && import.meta.env?.MODE !== 'production') {
         return;
       }
 

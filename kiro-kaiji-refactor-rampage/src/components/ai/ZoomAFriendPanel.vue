@@ -122,7 +122,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { TeamMember, TeamRole, AnimalAvatar, DialogResponse, ZoomSession, TEAM_MEMBERS, DialogContext } from '@/types/team'
+import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
+import type { TeamMember, DialogResponse, ZoomSession, DialogContext } from '@/types/team'
 
 interface Props {
   challengeId: string

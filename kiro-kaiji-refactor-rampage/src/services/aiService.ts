@@ -494,7 +494,7 @@ What specific aspect would you like help with?`;
 
     // Use use case-based model selection
     const useCase = openRouterConfig?.useCase || 'balanced';
-    let preferredModels = getModelPreferenceHierarchy(useCase);
+    const preferredModels = getModelPreferenceHierarchy(useCase);
 
     // If specific model is configured, prioritize it
     const configuredModel = this.config.model;

@@ -64,7 +64,9 @@ describe('LocalEvaluationService', () => {
         avatar: 'duplicatron.png',
         flavorText: 'Copy and paste is the way!',
         codePatterns: [],
-        difficultyModifiers: []
+        difficultyModifiers: [],
+        specialAbilities: ['Code duplication', 'Copy-paste mastery'],
+        weaknesses: ['DRY principle', 'Abstraction']
       },
       config: {
         language: ProgrammingLanguage.JAVASCRIPT,
@@ -334,7 +336,7 @@ function calculateTotalWithTax(items) {
 
       // Check if Kiro-specific feedback was added
       const kiroFeedback = result.evaluationResult.feedback.find(
-        feedback => feedback.category === 'kiro-refactoring'
+        feedback => feedback.category === 'quality'
       );
       expect(kiroFeedback).toBeDefined();
       expect(kiroFeedback?.suggestions).toContain('Consider using arrow functions for shorter syntax');

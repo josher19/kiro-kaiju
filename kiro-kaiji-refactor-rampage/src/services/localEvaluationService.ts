@@ -26,7 +26,7 @@ export interface LocalSubmissionResult {
 
 export class LocalEvaluationService extends EvaluationService {
   private config: LocalEvaluationConfig;
-  private pendingEvaluations: Map<string, NodeJS.Timeout> = new Map();
+  private pendingEvaluations: Map<string, number> = new Map();
 
   constructor(config: LocalEvaluationConfig) {
     super();
@@ -269,7 +269,13 @@ export class LocalEvaluationService extends EvaluationService {
           }
         };
 
-        const kiroAnalysis = await window.kiro.ai.analyze(analysisRequest);
+        const kiroAnalysis = await window.kiro.ai.analyze(
+          JSON.stringify(analysisRequest),
+          {
+            challengeId: challenge.id,
+            language: challenge.config.language
+          }
+        );
         
         if (kiroAnalysis.success) {
           // Enhance evaluation result with Kiro's analysis
@@ -291,7 +297,7 @@ export class LocalEvaluationService extends EvaluationService {
     // Add Kiro-specific insights to feedback
     if (kiroAnalysis.refactoringSuggestions?.length > 0) {
       const refactoringFeedback: EvaluationFeedback = {
-        category: 'kiro-refactoring',
+        category: 'quality',
         score: evaluationResult.overallScore,
         maxScore: 100,
         message: 'Kiro AI Refactoring Suggestions',
@@ -303,7 +309,7 @@ export class LocalEvaluationService extends EvaluationService {
 
     if (kiroAnalysis.performanceInsights?.length > 0) {
       const performanceFeedback: EvaluationFeedback = {
-        category: 'kiro-performance',
+        category: 'performance',
         score: evaluationResult.scores.quality,
         maxScore: 100,
         message: 'Kiro AI Performance Analysis',
@@ -351,7 +357,7 @@ export class LocalEvaluationService extends EvaluationService {
       this.pendingEvaluations.delete(challengeId);
     }, 1000); // 1 second debounce
 
-    this.pendingEvaluations.set(challengeId, timeout);
+    this.pendingEvaluations.set(challengeId, timeout as unknown as number);
   }
 
   /**

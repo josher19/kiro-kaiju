@@ -54,9 +54,10 @@ describe('OfflineStorageService', () => {
         description: 'A bug that multiplies when you try to fix it',
         avatar: 'hydra-bug.png',
         flavorText: 'Fix one bug, create two more!',
-        difficulty: 3,
         codePatterns: [],
-        specialAbilities: []
+        difficultyModifiers: [],
+        specialAbilities: ['Bug multiplication', 'Recursive spawning'],
+        weaknesses: ['Proper error handling', 'Unit testing']
       },
       config: {
         language: ProgrammingLanguage.JAVASCRIPT,
@@ -572,14 +573,14 @@ describe('OfflineStorageService', () => {
         settings: {},
         metadata: {
           version: '1.0.0',
-          lastSync: new Date().toISOString(),
+          lastSync: new Date(),
           totalSize: 0
         }
       };
 
       // Add many challenges to simulate large data
       for (let i = 0; i < 10; i++) {
-        largeData.challenges[`challenge-${i}`] = {
+        (largeData.challenges as any)[`challenge-${i}`] = {
           challenge: mockChallenge,
           cachedAt: new Date(Date.now() - i * 1000).toISOString(),
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),

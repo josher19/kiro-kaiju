@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useNetworkStatus } from '@/services/networkService';
 import { useOfflineStorage } from '@/services/offlineStorageService';
 
@@ -230,29 +230,36 @@ async function checkConnection() {
 // Lifecycle
 onMounted(() => {
   // Watch for network status changes
-  const unwatch = networkStatus.$watch((newStatus, oldStatus) => {
-    if (newStatus.isOnline !== oldStatus?.isOnline) {
-      emit('statusChange', {
-        isOnline: newStatus.isOnline,
-        quality: getNetworkQuality()
-      });
-      
-      if (newStatus.isOnline) {
-        scheduleAutoHide();
-      } else {
-        clearAutoHide();
-        expanded.value = false;
+  const unwatch = watch(
+    () => networkStatus,
+    (newStatus, oldStatus) => {
+      if (newStatus.isOnline !== oldStatus?.isOnline) {
+        emit('statusChange', {
+          isOnline: newStatus.isOnline,
+          quality: getNetworkQuality()
+        });
+        
+        if (newStatus.isOnline) {
+          scheduleAutoHide();
+        } else {
+          clearAutoHide();
+          expanded.value = false;
+        }
       }
-    }
-  });
+    },
+    { deep: true }
+  );
   
   // Watch for sync completion
-  const unwatchSync = pendingSync.$watch((newCount, oldCount) => {
-    if (oldCount > 0 && newCount === 0) {
-      emit('syncComplete');
-      scheduleAutoHide();
+  const unwatchSync = watch(
+    () => pendingSync.value,
+    (newCount, oldCount) => {
+      if (oldCount && oldCount > 0 && newCount === 0) {
+        emit('syncComplete');
+        scheduleAutoHide();
+      }
     }
-  });
+  );
   
   // Initial auto-hide schedule
   if (isOnline.value) {

@@ -49,9 +49,9 @@ describe('AIService', () => {
       avatar: '/images/hydra-bug.png',
       codePatterns: [],
       difficultyModifiers: [],
-      backstory: 'Ancient bug multiplier',
-      weaknesses: ['proper testing'],
-      strengths: ['chaos creation']
+      specialAbilities: ['Bug multiplication', 'Recursive spawning'],
+      weaknesses: ['Proper error handling', 'Unit testing'],
+      flavorText: 'Ancient bug multiplier'
     };
 
     mockChallengeContext = {

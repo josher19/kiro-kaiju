@@ -1,38 +1,57 @@
+---
+inclusion: always
+---
+
 # Git Commit Guidelines
 
-## Automatic Commit Messages
+## Commit Message Format
 
-When modifying .kiro files or completing spec tasks, always add a one-line git commit message that follows this format:
+All commits must use a single-line format with gitmoji and structured messaging:
 
-**Format**: `[gitmoji] feat: [feature-name] - [task-number] [brief-description]`
+**Format**: `[gitmoji] [type]: [scope] - [task-id] [description]`
 
 **Examples**:
 - `✨ feat: kiro-kaiji-refactor-rampage - 1.1 Set up project structure and core interfaces`
 - `🔒 feat: user-authentication - 2.3 Implement password validation logic`
-- `🐛 feat: api-integration - 4.2 Add error handling for network requests`
+- `🐛 fix: api-integration - 4.2 Add error handling for network requests`
 
-## Common Gitmoji for Spec Work
+## Gitmoji Reference
 
-- `✨` `:sparkles:` - New features or major functionality
-- `📝` `:memo:` - Documentation updates (requirements.md, design.md)
-- `🔧` `:wrench:` - Configuration changes
-- `🐛` `:bug:` - Bug fixes
-- `♻️` `:recycle:` - Refactoring code
-- `✅` `:white_check_mark:` - Adding or updating tests
-- `🔒` `:lock:` - Security-related changes
-- `🎨` `:art:` - UI/UX improvements
+- `✨` - New features or major functionality
+- `📝` - Documentation updates (requirements.md, design.md, README)
+- `🔧` - Configuration changes (vite, tailwind, tsconfig)
+- `🐛` - Bug fixes and error corrections
+- `♻️` - Code refactoring without feature changes
+- `✅` - Adding or updating tests
+- `🔒` - Security-related changes
+- `🎨` - UI/UX improvements and styling
+- `🚀` - Performance improvements
+- `📦` - Dependencies and package updates
 
-## When to Commit
+## Commit Types
 
-- After completing any task from a spec's tasks.md file
-- After modifying requirements.md, design.md, or tasks.md files
-- After creating new spec directories or files
-- After significant updates to steering files
+- `feat` - New features or enhancements
+- `fix` - Bug fixes
+- `docs` - Documentation only changes
+- `style` - Code style changes (formatting, semicolons)
+- `refactor` - Code refactoring
+- `test` - Adding or updating tests
+- `chore` - Maintenance tasks
 
-## Commit Message Rules
+## Commit Triggers
 
-- Use lowercase for feature names (kebab-case)
-- Include the task number when completing specific tasks
-- Keep descriptions concise but descriptive
-- Use present tense ("Add" not "Added")
-- Focus on what was accomplished, not how
+Always commit after:
+- Completing spec tasks from tasks.md
+- Updating .kiro files (requirements.md, design.md, tasks.md)
+- Creating new components or services
+- Significant feature implementations
+- Test additions or updates
+
+## Message Rules
+
+- Single line only (no multi-line commits)
+- Use kebab-case for scope names
+- Include task numbers when applicable
+- Present tense verbs ("Add" not "Added")
+- Concise but descriptive
+- Focus on what was accomplished

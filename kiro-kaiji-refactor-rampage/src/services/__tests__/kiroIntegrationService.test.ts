@@ -71,7 +71,9 @@ describe('KiroIntegrationService', () => {
         avatar: 'complexasaur.png',
         flavorText: 'More complexity is always better!',
         codePatterns: [],
-        difficultyModifiers: []
+        difficultyModifiers: [],
+        specialAbilities: ['Complex nesting', 'Confusing logic'],
+        weaknesses: ['Refactoring', 'Clean code principles']
       },
       config: {
         language: ProgrammingLanguage.TYPESCRIPT,

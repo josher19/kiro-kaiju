@@ -89,7 +89,7 @@ export class CodeTemplateGenerator {
   private generateJavaScriptTemplate(framework?: Framework, category: ChallengeCategory = ChallengeCategory.REFACTORING): CodeTemplate {
     let baseCode = '';
     let imports: string[] = [];
-    let exports: string[] = [];
+    const exports: string[] = [];
 
     switch (framework) {
       case Framework.VUE:

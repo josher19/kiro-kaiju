@@ -131,7 +131,7 @@ export class OfflineStorageService {
       console.log('Offline storage initialized successfully');
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'offline_storage_init' });
+      errorHandler.handle(error as Error, { context: 'offline_storage_init' });
       throw error;
     }
   }
@@ -209,7 +209,7 @@ export class OfflineStorageService {
       console.log(`Challenge ${challenge.id} cached for offline use`);
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'cache_challenge',
         challengeId: challenge.id 
       });
@@ -242,7 +242,7 @@ export class OfflineStorageService {
       return cached.challenge;
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'get_cached_challenge',
         challengeId 
       });
@@ -273,7 +273,7 @@ export class OfflineStorageService {
       return validChallenges;
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'get_cached_challenges' });
+      errorHandler.handle(error as Error, { context: 'get_cached_challenges' });
       return [];
     }
   }
@@ -315,7 +315,7 @@ export class OfflineStorageService {
       return evaluationId;
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'store_pending_evaluation',
         challengeId 
       });
@@ -334,7 +334,7 @@ export class OfflineStorageService {
       return Object.values(data.pendingEvaluations);
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'get_pending_evaluations' });
+      errorHandler.handle(error as Error, { context: 'get_pending_evaluations' });
       return [];
     }
   }
@@ -353,7 +353,7 @@ export class OfflineStorageService {
       this._pendingSync.value = Object.keys(data.pendingEvaluations).length;
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'remove_pending_evaluation',
         evaluationId 
       });
@@ -388,7 +388,7 @@ export class OfflineStorageService {
       await this.updateStorageQuota();
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'cache_chat_history',
         challengeId 
       });
@@ -409,7 +409,7 @@ export class OfflineStorageService {
       return cached ? cached.messages : [];
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'get_cached_chat_history',
         challengeId 
       });
@@ -430,7 +430,7 @@ export class OfflineStorageService {
       await this.updateStorageQuota();
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'store_user_progress' });
+      errorHandler.handle(error as Error, { context: 'store_user_progress' });
     }
   }
 
@@ -443,7 +443,7 @@ export class OfflineStorageService {
       return data?.userProgress || null;
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'get_stored_user_progress' });
+      errorHandler.handle(error as Error, { context: 'get_stored_user_progress' });
       return null;
     }
   }
@@ -460,7 +460,7 @@ export class OfflineStorageService {
       this.saveOfflineData(data);
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'store_setting',
         key 
       });
@@ -478,7 +478,7 @@ export class OfflineStorageService {
       return data.settings[key] !== undefined ? data.settings[key] : defaultValue;
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'get_stored_setting',
         key 
       });
@@ -535,7 +535,7 @@ export class OfflineStorageService {
       this.notifySyncListeners({ type: 'evaluations', count: pendingEvaluations.length });
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'sync_pending_data' });
+      errorHandler.handle(error as Error, { context: 'sync_pending_data' });
     }
   }
 
@@ -628,7 +628,7 @@ export class OfflineStorageService {
       }
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'cleanup_expired_data' });
+      errorHandler.handle(error as Error, { context: 'cleanup_expired_data' });
     }
   }
 
@@ -674,7 +674,7 @@ export class OfflineStorageService {
       return parsed;
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'get_offline_data' });
+      errorHandler.handle(error as Error, { context: 'get_offline_data' });
       return null;
     }
   }
@@ -694,7 +694,7 @@ export class OfflineStorageService {
         // Storage quota exceeded, try to free up space
         this.handleStorageQuotaExceeded(data);
       } else {
-        errorHandler.handle(error, { context: 'save_offline_data' });
+        errorHandler.handle(error as Error, { context: 'save_offline_data' });
       }
     }
   }
@@ -737,7 +737,7 @@ export class OfflineStorageService {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
-      errorHandler.handle(error, { context: 'save_after_cleanup' });
+      errorHandler.handle(error as Error, { context: 'save_after_cleanup' });
     }
   }
 
@@ -789,7 +789,7 @@ export class OfflineStorageService {
       console.log('All offline data cleared');
 
     } catch (error) {
-      errorHandler.handle(error, { context: 'clear_all_data' });
+      errorHandler.handle(error as Error, { context: 'clear_all_data' });
     }
   }
 

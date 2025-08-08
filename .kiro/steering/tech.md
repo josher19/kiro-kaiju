@@ -53,9 +53,44 @@ npm run type-check  # TypeScript type checking
 npm run format      # Format code with Prettier
 ```
 
+## Build Process & Troubleshooting
+
+### Common Build Issues
+- **Monaco Editor**: Large bundle size - use dynamic imports and code splitting
+- **TypeScript Errors**: Ensure all type definitions are properly imported
+- **Tailwind CSS**: Verify PostCSS configuration and purge settings
+- **Vite Configuration**: Check for proper plugin setup and path resolution
+
+### Build Optimization
+- Use `npm run build` to identify bundle size issues
+- Check `dist/` folder for proper asset generation
+- Verify source maps are generated for debugging
+- Ensure proper tree-shaking for unused code elimination
+
+### Dependency Management
+- Run `npm ci` for clean installs in production
+- Use `npm audit` to check for security vulnerabilities
+- Keep dependencies updated but test thoroughly
+- Consider using `npm-check-updates` for version management
+
+### Development Server Issues
+- Clear Vite cache: `rm -rf node_modules/.vite`
+- Restart dev server if hot reload stops working
+- Check for port conflicts (default: 5173)
+- Verify environment variables are properly loaded
+
 ## Performance Considerations
 - Code splitting and lazy loading for components
 - Service worker for offline functionality
 - Monaco Editor optimization for large files
 - Mobile-first responsive design
 - Progressive enhancement approach
+
+## LLM Execution Speed
+
+Use a small delay before calling the LLM so you are less likely to hit quotas
+
+## Remote and Local LLM
+
+- 'local' - Use a local OpenAI compatible endpoint like LLM Studio (default url: http://localhost:1234/v1)
+- 'remote' - use OpenRouter with free providers. Favor model openai/gpt-oss-20b, Claude, and other models that are good at coding and reasoning.

@@ -55,7 +55,7 @@
   - Build chat input with send functionality
   - Implement message history and context management
   - Add loading states and error handling for AI responses
-  - Integrate with Kiro AI API or OpenRouter API based on deployment mode
+  - Integrate with multiple AI providers (Kiro AI, Local LLM, Remote LLM)
   - Write tests for chat functionality and API integration
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
@@ -106,16 +106,49 @@
   - Write integration tests for Kiro IDE functionality
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 13. Implement AWS Cloud Mode Services
+- [x] 13. Implement Local LLM Integration
+  - Configure OpenAI-compatible endpoint support for local LLM providers
+  - Set default local endpoint to http://localhost:1234/v1 for LLM Studio compatibility
+  - Implement connection detection and fallback logic for local LLM services
+  - Add environment configuration for local LLM model selection
+  - Create request delay mechanism to avoid quota issues
+  - Write unit tests for local LLM integration and error handling
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 14. Implement Remote LLM Integration with OpenRouter
+  - Configure OpenRouter API integration with preferred model selection
+  - Implement model preference hierarchy (openai/gpt-oss-20b, Claude, coding-focused models)
+  - Add automatic model fallback when preferred models are unavailable
+  - Implement request rate limiting and delay mechanisms
+  - Create cost-aware model selection for free tier optimization
+  - Write integration tests for OpenRouter API and model switching
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 15. Fix Build Process and Ensure Test Suite Passes
+  - Resolve all TypeScript compilation errors and type issues
+  - Fix Vite build configuration and dependency conflicts
+  - Address Monaco Editor bundle size and import issues
+  - Resolve Tailwind CSS configuration and PostCSS setup problems
+  - Fix any ESLint and Prettier configuration conflicts
+  - Should e2e tests be run via `npm run test` (vitest) or `npm run test:e2e' (playwright)
+  - Check if `npm run test` is running anything it should not
+  - Ensure ALL unit tests pass without errors or warnings
+  - Verify E2E tests run successfully across all test scenarios
+  - Clean up unused dependencies and optimize package.json
+  - Validate build output and ensure proper asset generation
+  - Test development server stability and hot reload functionality
+  - _Requirements: All requirements depend on a stable build process_
+
+- [ ] 16. Implement AWS Cloud Mode Services
   - Set up AWS Lambda functions for challenge generation and evaluation
   - Configure DynamoDB for user progress and challenge storage
-  - Integrate OpenRouter API for AI-powered assistance
+  - Integrate multi-provider AI support (Local LLM, Remote LLM, Kiro AI)
   - Implement user authentication and session management
   - Create API endpoints for all cloud-based functionality
-  - Write integration tests for AWS services
+  - Write integration tests for AWS services and AI provider switching
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
 
-- [x] 14. Add Error Handling and Offline Support
+- [x] 16. Add Error Handling and Offline Support
   - Implement comprehensive error handling with user-friendly messages
   - Create offline mode with cached challenges and local storage
   - Add network connectivity detection and graceful degradation
@@ -124,7 +157,7 @@
   - Write tests for error scenarios and offline functionality
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 15. Optimize Performance and Accessibility
+- [ ] 17. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -133,7 +166,7 @@
   - Write performance tests and accessibility audits
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 16. Create End-to-End Testing Suite
+- [x] 18. Create End-to-End Testing Suite
   - Write E2E tests for complete challenge workflow
   - Test mobile responsiveness across different devices
   - Verify AI integration and Zoom-a-Friend functionality

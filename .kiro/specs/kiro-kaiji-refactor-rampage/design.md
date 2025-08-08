@@ -22,16 +22,26 @@ graph TB
     D --> I[Code Quality Analyzer]
     D --> J[Test Runner]
     
-    E --> K[Kiro AI API / OpenRouter API]
+    E --> K{AI Provider Selection}
+    K --> L[Kiro AI API]
+    K --> M[Local LLM - LLM Studio]
+    K --> N[Remote LLM - OpenRouter]
     
-    F --> L[User Database]
+    F --> O[User Database]
     
     subgraph "Frontend Components"
-        A --> M[Challenge Selector]
-        A --> N[Code Editor]
-        A --> O[AI Chat Interface]
-        A --> P[Zoom-a-Friend Panel]
-        A --> Q[Evaluation Dashboard]
+        A --> P[Challenge Selector]
+        A --> Q[Code Editor]
+        A --> R[AI Chat Interface]
+        A --> S[Zoom-a-Friend Panel]
+        A --> T[Evaluation Dashboard]
+    end
+    
+    subgraph "LLM Configuration"
+        M --> U[http://localhost:1234/v1]
+        N --> V[openai/gpt-oss-20b]
+        N --> W[Claude Models]
+        N --> X[Other Coding Models]
     end
 ```
 
@@ -48,17 +58,19 @@ graph TB
 
 ### Deployment Modes
 
-#### Local Mode
+#### Local Mode (Kiro IDE Integration)
 - **File Management**: Kiro IDE handles file modifications directly in the local workspace
 - **Code Submission**: Users submit code through the locally running application
 - **AI Integration**: Direct integration with Kiro's built-in AI capabilities
 - **Benefits**: No external dependencies, immediate feedback, full IDE integration
 
-#### AWS Cloud Mode  
+#### AWS Cloud Mode with LLM Options
 - **Infrastructure**: AWS Lambda functions for serverless backend services
-- **AI Provider**: OpenRouter API for AI-powered code assistance and evaluation
 - **Storage**: AWS DynamoDB for user progress and challenge data
-- **Benefits**: Scalable, multi-user support, persistent data storage
+- **AI Provider Options**:
+  - **Local LLM**: OpenAI-compatible endpoint (default: http://localhost:1234/v1) using LLM Studio or similar
+  - **Remote LLM**: OpenRouter API with preferred models (openai/gpt-oss-20b, Claude, other coding-focused models)
+- **Benefits**: Scalable, multi-user support, persistent data storage, flexible AI provider options
 
 ## Components and Interfaces
 
@@ -126,6 +138,16 @@ interface AIChatInterface {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   challengeContext: ChallengeContext;
+}
+
+interface AIServiceConfig {
+  provider: 'kiro' | 'local' | 'remote';
+  localEndpoint?: string; // Default: http://localhost:1234/v1
+  remoteApiKey?: string;
+  remoteModel?: string; // Preferred: openai/gpt-oss-20b, Claude
+  requestDelay: number; // Small delay to avoid quota issues
+  maxTokens: number;
+  temperature: number;
 }
 ```
 

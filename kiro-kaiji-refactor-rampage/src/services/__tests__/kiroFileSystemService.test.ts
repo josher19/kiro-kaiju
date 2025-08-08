@@ -62,7 +62,9 @@ describe('KiroFileSystemService', () => {
                 avatar: 'hydra-bug.png',
                 flavorText: 'Fix one bug, create two more!',
                 codePatterns: [],
-                difficultyModifiers: []
+                difficultyModifiers: [],
+                specialAbilities: ['Bug multiplication', 'Recursive spawning'],
+                weaknesses: ['Proper error handling', 'Unit testing']
             },
             config: {
                 language: ProgrammingLanguage.JAVASCRIPT,
@@ -279,7 +281,7 @@ describe('KiroFileSystemService', () => {
 
         it('should handle file changes correctly', async () => {
             // Get the change handler that was registered
-            const changeHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'change')[1];
+            const changeHandler = mockWatcher.on.mock.calls.find((call: any) => call[0] === 'change')[1];
 
             const mockChange = {
                 path: './test-challenges/test-challenge-1/main.js',
@@ -308,7 +310,7 @@ describe('KiroFileSystemService', () => {
             service.removeFileChangeListener(changeListener);
 
             // Trigger a change and verify listener is not called
-            const changeHandler = mockWatcher.on.mock.calls.find(call => call[0] === 'change')[1];
+            const changeHandler = mockWatcher.on.mock.calls.find((call: any) => call[0] === 'change')[1];
             changeHandler({
                 path: './test-challenges/test-challenge-1/main.js',
                 type: 'modified'

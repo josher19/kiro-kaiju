@@ -250,7 +250,7 @@ export class NetworkService {
       return isConnected;
 
     } catch (error) {
-      errorHandler.handle(error, { 
+      errorHandler.handle(error as Error, { 
         context: 'connectivity_check',
         consecutiveFailures: this.consecutiveFailures 
       });

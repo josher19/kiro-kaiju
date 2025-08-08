@@ -276,7 +276,8 @@ async function retry() {
 }
 
 function goBack() {
-  if (router.canGoBack()) {
+  // Vue Router 4 doesn't have canGoBack, use history API instead
+  if (window.history.length > 1) {
     router.back();
   } else {
     router.push('/');
