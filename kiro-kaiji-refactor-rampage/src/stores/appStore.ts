@@ -199,6 +199,33 @@ export const useAppStore = defineStore('app', () => {
     localStorage.setItem('kiro-kaiju-config', JSON.stringify(kiroConfig.value));
   };
 
+  // Initialize AI service based on deployment mode
+  const initializeAIService = async () => {
+    try {
+      const { createAIService } = await import('@/services/aiService');
+      
+      if (deploymentMode.value === 'local') {
+        // Local mode - use Kiro IDE integration
+        createAIService({
+          mode: 'local'
+        });
+      } else {
+        // Cloud mode - use OpenRouter API with fallback
+        const apiKey = localStorage.getItem('openrouter-api-key') || '';
+        createAIService({
+          mode: 'cloud',
+          apiKey,
+          baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+          model: 'anthropic/claude-3-haiku'
+        });
+      }
+      
+      console.log(`AI service initialized in ${deploymentMode.value} mode`);
+    } catch (error) {
+      console.error('Failed to initialize AI service:', error);
+    }
+  };
+
   // Initialize app state
   const initializeApp = async () => {
     // Load theme preference
@@ -229,6 +256,9 @@ export const useAppStore = defineStore('app', () => {
         console.warn('Failed to parse saved Kiro config:', error);
       }
     }
+
+    // Initialize AI service
+    await initializeAIService();
 
     // Set initial mobile state
     setMobile(window.innerWidth < 1024);

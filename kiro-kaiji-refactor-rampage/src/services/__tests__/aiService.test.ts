@@ -6,7 +6,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { AIService, createAIService, type AIServiceConfig } from '../aiService';
+import { 
+  AIService, 
+  createAIService, 
+  createLocalLLMAIService, 
+  createOpenRouterAIService,
+  type AIServiceConfig 
+} from '../aiService';
 import type { ChallengeContext } from '@/types/challenge';
 import type { KaijuMonster } from '@/types/kaiju';
 import { KaijuType } from '@/types/kaiju';
@@ -333,6 +339,365 @@ describe('AIService', () => {
       expect(requestBody.systemPrompt).toContain('refactoring');
     });
   });
+
+  describe('Local LLM Integration', () => {
+    let localLLMService: AIService;
+
+    beforeEach(() => {
+      const localConfig: AIServiceConfig = {
+        mode: 'local',
+        provider: 'local-llm',
+        requestDelay: 500,
+        localLLM: {
+          endpoint: 'http://localhost:1234/v1',
+          model: 'local-model',
+          timeout: 30000,
+          maxRetries: 3
+        }
+      };
+      localLLMService = new AIService(localConfig);
+    });
+
+    it('should send message to Local LLM endpoint', async () => {
+      // Mock connection test
+      const connectionTestResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [] })
+      };
+      
+      // Mock chat completion response
+      const chatResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Local LLM response to your refactoring question'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse) // Connection test
+        .mockResolvedValueOnce(chatResponse); // Chat completion
+
+      const result = await localLLMService.sendMessage(
+        'Help me refactor this code',
+        mockChallengeContext,
+        'user-123'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Local LLM response to your refactoring question');
+      expect(result.message?.role).toBe('assistant');
+
+      // Verify connection test call
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:1234/v1/models',
+        expect.objectContaining({
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+      );
+
+      // Verify chat completion call
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:1234/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer dummy-key'
+          },
+          body: expect.stringContaining('Help me refactor this code')
+        })
+      );
+    });
+
+    it('should handle Local LLM connection failure', async () => {
+      // Mock failed connection test
+      (global.fetch as any).mockRejectedValue(new Error('Connection refused'));
+
+      const result = await localLLMService.sendMessage(
+        'Test message',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Local LLM endpoint is not reachable');
+    });
+
+    it('should handle Local LLM timeout', async () => {
+      // Mock connection test success
+      const connectionTestResponse = { ok: true };
+      
+      // Mock timeout for chat completion
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse)
+        .mockImplementation(() => new Promise(() => {})); // Never resolves (timeout)
+
+      const result = await localLLMService.sendMessage(
+        'Test message',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Local LLM request timed out');
+    });
+
+    it('should handle Local LLM API errors', async () => {
+      // Mock connection test success
+      const connectionTestResponse = { ok: true };
+      
+      // Mock API error response
+      const errorResponse = {
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse)
+        .mockResolvedValueOnce(errorResponse);
+
+      const result = await localLLMService.sendMessage(
+        'Test message',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Local LLM API error: 500');
+    });
+
+    it('should handle invalid Local LLM response format', async () => {
+      // Mock connection test success
+      const connectionTestResponse = { ok: true };
+      
+      // Mock invalid response format
+      const invalidResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          // Missing choices array
+          invalid: 'response'
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse)
+        .mockResolvedValueOnce(invalidResponse);
+
+      const result = await localLLMService.sendMessage(
+        'Test message',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid response format from Local LLM');
+    });
+
+    it('should apply request delay before making requests', async () => {
+      const startTime = Date.now();
+      
+      // Mock successful responses
+      const connectionTestResponse = { ok: true };
+      const chatResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Response' } }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse)
+        .mockResolvedValueOnce(chatResponse);
+
+      await localLLMService.sendMessage('Test', mockChallengeContext);
+      
+      const endTime = Date.now();
+      const elapsed = endTime - startTime;
+      
+      // Should have waited at least the request delay (500ms in test config)
+      expect(elapsed).toBeGreaterThanOrEqual(450); // Allow some tolerance
+    });
+
+    it('should use custom endpoint and model from config', async () => {
+      const customConfig: AIServiceConfig = {
+        mode: 'local',
+        provider: 'local-llm',
+        localLLM: {
+          endpoint: 'http://custom-endpoint:8080/v1',
+          model: 'custom-model',
+          timeout: 15000,
+          maxRetries: 2
+        }
+      };
+      
+      const customService = new AIService(customConfig);
+      
+      const connectionTestResponse = { ok: true };
+      const chatResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Custom response' } }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(connectionTestResponse)
+        .mockResolvedValueOnce(chatResponse);
+
+      await customService.sendMessage('Test', mockChallengeContext);
+
+      // Verify custom endpoint was used
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://custom-endpoint:8080/v1/models',
+        expect.any(Object)
+      );
+      
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://custom-endpoint:8080/v1/chat/completions',
+        expect.objectContaining({
+          body: expect.stringContaining('"model":"custom-model"')
+        })
+      );
+    });
+  });
+
+  describe('Request delay mechanism', () => {
+    it('should apply request delay when configured', async () => {
+      const delayConfig: AIServiceConfig = {
+        mode: 'local',
+        provider: 'kiro',
+        requestDelay: 1000
+      };
+      
+      const delayService = new AIService(delayConfig);
+      const startTime = Date.now();
+      
+      // Mock Kiro environment
+      (global as any).window = {
+        kiro: {
+          ai: {
+            chat: vi.fn().mockResolvedValue({
+              success: true,
+              message: 'Delayed response'
+            })
+          }
+        }
+      };
+
+      await delayService.sendMessage('Test', mockChallengeContext);
+      
+      const elapsed = Date.now() - startTime;
+      expect(elapsed).toBeGreaterThanOrEqual(950); // Allow some tolerance
+      
+      // Cleanup
+      delete (global as any).window;
+    });
+
+    it('should not apply delay when requestDelay is 0', async () => {
+      const noDelayConfig: AIServiceConfig = {
+        mode: 'local',
+        provider: 'kiro',
+        requestDelay: 0
+      };
+      
+      const noDelayService = new AIService(noDelayConfig);
+      const startTime = Date.now();
+      
+      // Mock Kiro environment
+      (global as any).window = {
+        kiro: {
+          ai: {
+            chat: vi.fn().mockResolvedValue({
+              success: true,
+              message: 'Immediate response'
+            })
+          }
+        }
+      };
+
+      await noDelayService.sendMessage('Test', mockChallengeContext);
+      
+      const elapsed = Date.now() - startTime;
+      expect(elapsed).toBeLessThan(100); // Should be very fast
+      
+      // Cleanup
+      delete (global as any).window;
+    });
+  });
+
+  describe('Provider selection logic', () => {
+    it('should use kiro provider by default in local mode', async () => {
+      const defaultConfig: AIServiceConfig = {
+        mode: 'local'
+        // No provider specified
+      };
+      
+      const defaultService = new AIService(defaultConfig);
+      
+      // Mock Kiro environment
+      (global as any).window = {
+        kiro: {
+          ai: {
+            chat: vi.fn().mockResolvedValue({
+              success: true,
+              message: 'Kiro response'
+            })
+          }
+        }
+      };
+
+      const result = await defaultService.sendMessage('Test', mockChallengeContext);
+      
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Kiro response');
+      expect((global as any).window.kiro.ai.chat).toHaveBeenCalled();
+      
+      // Cleanup
+      delete (global as any).window;
+    });
+
+    it('should use openrouter provider by default in cloud mode', async () => {
+      const cloudConfig: AIServiceConfig = {
+        mode: 'cloud',
+        apiKey: 'test-key'
+        // No provider specified
+      };
+      
+      const cloudService = new AIService(cloudConfig);
+      
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: 'OpenRouter response' } }]
+        })
+      };
+      
+      (global.fetch as any).mockResolvedValue(mockResponse);
+
+      const result = await cloudService.sendMessage('Test', mockChallengeContext);
+      
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('OpenRouter response');
+    });
+
+    it('should throw error for unknown provider', async () => {
+      const invalidConfig: AIServiceConfig = {
+        mode: 'local',
+        provider: 'unknown-provider' as any
+      };
+      
+      const invalidService = new AIService(invalidConfig);
+
+      const result = await invalidService.sendMessage('Test', mockChallengeContext);
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unknown AI provider: unknown-provider');
+    });
+  });
 });
 
 describe('AIService factory functions', () => {
@@ -345,11 +710,35 @@ describe('AIService factory functions', () => {
     expect(service).toBeInstanceOf(AIService);
   });
 
-  it('should throw error when getting service before creation', () => {
-    expect(() => {
-      // This should be called after createAIService, but we're testing the error case
-      // Reset the singleton first by creating a new one
-      createAIService({ mode: 'local' });
-    }).not.toThrow();
+  it('should create Local LLM service with defaults', () => {
+    const service = createLocalLLMAIService();
+    expect(service).toBeInstanceOf(AIService);
+  });
+
+  it('should create Local LLM service with custom endpoint', () => {
+    const service = createLocalLLMAIService('http://custom:8080/v1', 'custom-model');
+    expect(service).toBeInstanceOf(AIService);
+  });
+
+  it('should create OpenRouter service', () => {
+    const service = createOpenRouterAIService('test-key', 'test-model');
+    expect(service).toBeInstanceOf(AIService);
+  });
+
+  it('should auto-initialize service when getting without creation', () => {
+    // Mock environment variables
+    vi.stubGlobal('import', {
+      meta: {
+        env: {
+          VITE_AI_MODE: 'local',
+          VITE_AI_PROVIDER: 'kiro'
+        }
+      }
+    });
+
+    const service = createAIService(); // Should use environment config
+    expect(service).toBeInstanceOf(AIService);
+    
+    vi.unstubAllGlobals();
   });
 });

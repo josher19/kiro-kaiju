@@ -17,9 +17,17 @@ import { offlineStorageService } from './offlineStorageService';
 
 export interface AIServiceConfig {
   mode: 'local' | 'cloud';
+  provider?: 'kiro' | 'local-llm' | 'openrouter';
   apiKey?: string;
   baseUrl?: string;
   model?: string;
+  localLLM?: {
+    endpoint: string;
+    model?: string;
+    timeout?: number;
+    maxRetries?: number;
+  };
+  requestDelay?: number;
 }
 
 export class AIService {
@@ -78,16 +86,32 @@ export class AIService {
 
       let response: AIChatMessage;
 
+      // Apply request delay to avoid quota issues
+      if (this.config.requestDelay && this.config.requestDelay > 0) {
+        await this.delay(this.config.requestDelay);
+      }
+
       // Check network status for cloud mode
       if (this.config.mode === 'cloud' && !networkService.isOnline.value) {
         // Provide offline fallback response
         response = this.generateOfflineFallbackResponse(request, challengeContext);
       } else {
         try {
-          if (this.config.mode === 'local') {
-            response = await this.sendToKiroAI(request, challengeContext);
-          } else {
-            response = await this.sendToOpenRouter(request, challengeContext);
+          // Determine provider based on config
+          const provider = this.config.provider || (this.config.mode === 'local' ? 'kiro' : 'openrouter');
+          
+          switch (provider) {
+            case 'kiro':
+              response = await this.sendToKiroAI(request, challengeContext);
+              break;
+            case 'local-llm':
+              response = await this.sendToLocalLLM(request, challengeContext);
+              break;
+            case 'openrouter':
+              response = await this.sendToOpenRouter(request, challengeContext);
+              break;
+            default:
+              throw new Error(`Unknown AI provider: ${provider}`);
           }
         } catch (error) {
           // If network request fails, provide fallback response
@@ -278,6 +302,120 @@ What specific aspect would you like help with?`;
         currentCode: request.currentCode
       }
     };
+  }
+
+  /**
+   * Send request to Local LLM (OpenAI-compatible endpoint)
+   */
+  private async sendToLocalLLM(
+    request: AIChatRequest,
+    challengeContext: ChallengeContext
+  ): Promise<AIChatMessage> {
+    const localConfig = this.config.localLLM || {
+      endpoint: 'http://localhost:1234/v1',
+      timeout: 30000,
+      maxRetries: 3
+    };
+
+    // Test connection first
+    const isConnected = await this.testLocalLLMConnection(localConfig.endpoint);
+    if (!isConnected) {
+      throw new Error('Local LLM endpoint is not reachable');
+    }
+
+    const systemPrompt = this.buildSystemPrompt(challengeContext);
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...request.conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: request.message }
+    ];
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), localConfig.timeout || 30000);
+
+    try {
+      const response = await fetch(`${localConfig.endpoint}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer dummy-key' // Some local LLMs require this
+        },
+        body: JSON.stringify({
+          model: localConfig.model || 'local-model',
+          messages,
+          temperature: 0.7,
+          max_tokens: 1000,
+          stream: false
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Local LLM API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid response format from Local LLM');
+      }
+
+      return {
+        id: this.generateMessageId(),
+        role: 'assistant',
+        content: data.choices[0].message.content,
+        timestamp: new Date(),
+        context: {
+          challengeId: request.challengeId,
+          currentCode: request.currentCode
+        }
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Local LLM request timed out');
+      }
+      
+      console.error('Local LLM integration error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test connection to Local LLM endpoint
+   */
+  private async testLocalLLMConnection(endpoint: string): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for connection test
+
+      const response = await fetch(`${endpoint}/models`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      return response.ok;
+    } catch (error) {
+      console.warn('Local LLM connection test failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Utility method to add delay
+   */
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -515,14 +653,65 @@ ${this.generateOfflineAdvice(request.message, challenge)}
 // Export singleton instance
 let aiServiceInstance: AIService | null = null;
 
-export function createAIService(config: AIServiceConfig): AIService {
+export function createAIService(config?: AIServiceConfig): AIService {
+  // If no config provided, create from environment
+  if (!config) {
+    try {
+      const { createAIConfigFromEnvironment } = require('../utils/aiConfig');
+      config = createAIConfigFromEnvironment();
+    } catch (error) {
+      // Fallback to default config if aiConfig module is not available
+      config = {
+        mode: 'local',
+        provider: 'kiro',
+        requestDelay: 1000
+      };
+    }
+  }
+  
   aiServiceInstance = new AIService(config);
   return aiServiceInstance;
 }
 
 export function getAIService(): AIService {
   if (!aiServiceInstance) {
-    throw new Error('AI Service not initialized. Call createAIService first.');
+    // Auto-initialize with environment config if not already created
+    return createAIService();
   }
   return aiServiceInstance;
+}
+
+/**
+ * Create AI service with Local LLM configuration
+ */
+export function createLocalLLMAIService(endpoint?: string, model?: string): AIService {
+  const config: AIServiceConfig = {
+    mode: 'local',
+    provider: 'local-llm',
+    requestDelay: 1000,
+    localLLM: {
+      endpoint: endpoint || 'http://localhost:1234/v1',
+      model: model || 'local-model',
+      timeout: 30000,
+      maxRetries: 3
+    }
+  };
+  
+  return createAIService(config);
+}
+
+/**
+ * Create AI service with OpenRouter configuration
+ */
+export function createOpenRouterAIService(apiKey: string, model?: string): AIService {
+  const config: AIServiceConfig = {
+    mode: 'cloud',
+    provider: 'openrouter',
+    apiKey,
+    baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+    model: model || 'openai/gpt-oss-20b',
+    requestDelay: 1000
+  };
+  
+  return createAIService(config);
 }
