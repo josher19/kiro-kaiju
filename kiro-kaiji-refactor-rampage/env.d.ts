@@ -11,6 +11,10 @@ interface ImportMetaEnv {
   readonly VITE_OPENROUTER_API_KEY?: string
   readonly VITE_OPENROUTER_MODEL?: string
   readonly VITE_OPENROUTER_BASE_URL?: string
+  readonly VITE_OPENROUTER_USE_CASE?: 'free' | 'coding' | 'quality' | 'balanced'
+  readonly VITE_OPENROUTER_PREFERRED_MODELS?: string
+  readonly VITE_OPENROUTER_MAX_RETRIES?: string
+  readonly VITE_OPENROUTER_ENABLE_FALLBACK?: string
   
   // General AI Configuration
   readonly VITE_AI_PROVIDER?: 'kiro' | 'local-llm' | 'openrouter'

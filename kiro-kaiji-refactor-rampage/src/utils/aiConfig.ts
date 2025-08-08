@@ -18,6 +18,10 @@ export interface EnvironmentConfig {
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   OPENROUTER_BASE_URL?: string;
+  OPENROUTER_USE_CASE?: 'free' | 'coding' | 'quality' | 'balanced';
+  OPENROUTER_PREFERRED_MODELS?: string;
+  OPENROUTER_MAX_RETRIES?: string;
+  OPENROUTER_ENABLE_FALLBACK?: string;
   
   // General AI Configuration
   AI_PROVIDER?: 'kiro' | 'local-llm' | 'openrouter';
@@ -39,6 +43,10 @@ export function getEnvironmentConfig(testEnv?: any): EnvironmentConfig {
       OPENROUTER_API_KEY: testEnv.VITE_OPENROUTER_API_KEY,
       OPENROUTER_MODEL: testEnv.VITE_OPENROUTER_MODEL,
       OPENROUTER_BASE_URL: testEnv.VITE_OPENROUTER_BASE_URL,
+      OPENROUTER_USE_CASE: testEnv.VITE_OPENROUTER_USE_CASE as any,
+      OPENROUTER_PREFERRED_MODELS: testEnv.VITE_OPENROUTER_PREFERRED_MODELS,
+      OPENROUTER_MAX_RETRIES: testEnv.VITE_OPENROUTER_MAX_RETRIES,
+      OPENROUTER_ENABLE_FALLBACK: testEnv.VITE_OPENROUTER_ENABLE_FALLBACK,
       AI_PROVIDER: testEnv.VITE_AI_PROVIDER as any,
       AI_REQUEST_DELAY: testEnv.VITE_AI_REQUEST_DELAY,
       AI_MODE: testEnv.VITE_AI_MODE as any
@@ -59,6 +67,10 @@ export function getEnvironmentConfig(testEnv?: any): EnvironmentConfig {
       OPENROUTER_API_KEY: env.VITE_OPENROUTER_API_KEY,
       OPENROUTER_MODEL: env.VITE_OPENROUTER_MODEL,
       OPENROUTER_BASE_URL: env.VITE_OPENROUTER_BASE_URL,
+      OPENROUTER_USE_CASE: env.VITE_OPENROUTER_USE_CASE as any,
+      OPENROUTER_PREFERRED_MODELS: env.VITE_OPENROUTER_PREFERRED_MODELS,
+      OPENROUTER_MAX_RETRIES: env.VITE_OPENROUTER_MAX_RETRIES,
+      OPENROUTER_ENABLE_FALLBACK: env.VITE_OPENROUTER_ENABLE_FALLBACK,
       AI_PROVIDER: env.VITE_AI_PROVIDER as any,
       AI_REQUEST_DELAY: env.VITE_AI_REQUEST_DELAY,
       AI_MODE: env.VITE_AI_MODE as any
@@ -76,6 +88,10 @@ export function getEnvironmentConfig(testEnv?: any): EnvironmentConfig {
         OPENROUTER_API_KEY: import.meta.env.VITE_OPENROUTER_API_KEY,
         OPENROUTER_MODEL: import.meta.env.VITE_OPENROUTER_MODEL,
         OPENROUTER_BASE_URL: import.meta.env.VITE_OPENROUTER_BASE_URL,
+        OPENROUTER_USE_CASE: import.meta.env.VITE_OPENROUTER_USE_CASE as any,
+        OPENROUTER_PREFERRED_MODELS: import.meta.env.VITE_OPENROUTER_PREFERRED_MODELS,
+        OPENROUTER_MAX_RETRIES: import.meta.env.VITE_OPENROUTER_MAX_RETRIES,
+        OPENROUTER_ENABLE_FALLBACK: import.meta.env.VITE_OPENROUTER_ENABLE_FALLBACK,
         AI_PROVIDER: import.meta.env.VITE_AI_PROVIDER as any,
         AI_REQUEST_DELAY: import.meta.env.VITE_AI_REQUEST_DELAY,
         AI_MODE: import.meta.env.VITE_AI_MODE as any
@@ -133,6 +149,17 @@ export function createAIConfigFromEnvironment(testEnv?: any): AIServiceConfig {
     config.apiKey = env.OPENROUTER_API_KEY;
     config.baseUrl = env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
     config.model = env.OPENROUTER_MODEL || 'openai/gpt-oss-20b';
+    
+    // Configure enhanced OpenRouter options
+    config.openRouter = {
+      useCase: env.OPENROUTER_USE_CASE || 'balanced',
+      preferredModels: env.OPENROUTER_PREFERRED_MODELS ? 
+        env.OPENROUTER_PREFERRED_MODELS.split(',').map(m => m.trim()) : 
+        undefined,
+      enableFallback: env.OPENROUTER_ENABLE_FALLBACK !== 'false', // Default to true
+      maxRetries: env.OPENROUTER_MAX_RETRIES ? parseInt(env.OPENROUTER_MAX_RETRIES, 10) : 3,
+      retryDelay: 1000
+    };
   }
   
   return config;
@@ -197,26 +224,99 @@ export function validateAIConfig(config: AIServiceConfig): { valid: boolean; err
 }
 
 /**
- * Get recommended models for different providers
+ * Get recommended models for different providers with cost-aware ordering
  */
 export function getRecommendedModels(): Record<string, string[]> {
   return {
     'openrouter': [
-      'openai/gpt-oss-20b',
-      'anthropic/claude-3-haiku',
-      'anthropic/claude-3-sonnet',
-      'meta-llama/codellama-34b-instruct',
-      'codellama/codellama-70b-instruct',
-      'microsoft/wizardcoder-34b'
+      // Free tier models (prioritized for cost optimization)
+      'openai/gpt-oss-20b',           // Free, good for coding
+      'meta-llama/codellama-34b-instruct', // Free, coding-focused
+      'microsoft/wizardcoder-34b',     // Free, coding-focused
+      'deepseek/deepseek-coder-33b-instruct', // Free, coding-focused
+      
+      // Cost-effective paid models
+      'anthropic/claude-3-haiku',      // Fast and cost-effective
+      'openai/gpt-4o-mini',           // OpenAI's efficient model
+      'openai/gpt-3.5-turbo',         // Reliable fallback
+      
+      // Higher quality, more expensive models
+      'anthropic/claude-3-sonnet',     // Higher quality
+      'openai/gpt-4o',                // Latest OpenAI model
+      'anthropic/claude-3-opus'        // Highest quality, most expensive
     ],
     'local-llm': [
       'local-model',
       'codellama',
       'deepseek-coder',
       'starcoder',
-      'wizardcoder'
+      'wizardcoder',
+      'phind-codellama',
+      'magicoder'
     ]
   };
+}
+
+/**
+ * Get free tier models for OpenRouter (cost optimization)
+ */
+export function getFreeTierModels(): string[] {
+  return [
+    'openai/gpt-oss-20b',
+    'meta-llama/codellama-34b-instruct',
+    'microsoft/wizardcoder-34b',
+    'deepseek/deepseek-coder-33b-instruct',
+    'nousresearch/nous-capybara-34b',
+    'teknium/openhermes-2.5-mistral-7b'
+  ];
+}
+
+/**
+ * Get coding-focused models for OpenRouter
+ */
+export function getCodingFocusedModels(): string[] {
+  return [
+    'openai/gpt-oss-20b',
+    'meta-llama/codellama-34b-instruct',
+    'microsoft/wizardcoder-34b',
+    'deepseek/deepseek-coder-33b-instruct',
+    'anthropic/claude-3-haiku',
+    'openai/gpt-4o-mini'
+  ];
+}
+
+/**
+ * Get model preference hierarchy based on use case
+ */
+export function getModelPreferenceHierarchy(useCase: 'free' | 'coding' | 'quality' | 'balanced' = 'balanced'): string[] {
+  switch (useCase) {
+    case 'free':
+      return getFreeTierModels();
+    
+    case 'coding':
+      return getCodingFocusedModels();
+    
+    case 'quality':
+      return [
+        'anthropic/claude-3-sonnet',
+        'openai/gpt-4o',
+        'anthropic/claude-3-opus',
+        'openai/gpt-oss-20b',
+        'anthropic/claude-3-haiku'
+      ];
+    
+    case 'balanced':
+    default:
+      return [
+        'openai/gpt-oss-20b',           // Free, good balance
+        'anthropic/claude-3-haiku',      // Fast and cost-effective
+        'meta-llama/codellama-34b-instruct', // Free, coding-focused
+        'microsoft/wizardcoder-34b',     // Free, coding-focused
+        'anthropic/claude-3-sonnet',     // Higher quality
+        'openai/gpt-4o-mini',           // OpenAI's efficient model
+        'openai/gpt-3.5-turbo'          // Reliable fallback
+      ];
+  }
 }
 
 /**
@@ -237,15 +337,28 @@ export function createDevelopmentConfig(): AIServiceConfig {
 }
 
 /**
- * Create production configuration
+ * Create production configuration with enhanced OpenRouter support
  */
-export function createProductionConfig(apiKey?: string): AIServiceConfig {
+export function createProductionConfig(
+  apiKey?: string,
+  options?: {
+    useCase?: 'free' | 'coding' | 'quality' | 'balanced';
+    preferredModels?: string[];
+  }
+): AIServiceConfig {
   return {
     mode: 'cloud',
     provider: 'openrouter',
-    apiKey: apiKey || process.env.OPENROUTER_API_KEY,
+    apiKey: apiKey,
     baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
     model: 'openai/gpt-oss-20b',
-    requestDelay: 1000
+    requestDelay: 1000,
+    openRouter: {
+      useCase: options?.useCase || 'balanced',
+      preferredModels: options?.preferredModels,
+      enableFallback: true,
+      maxRetries: 3,
+      retryDelay: 1000
+    }
   };
 }

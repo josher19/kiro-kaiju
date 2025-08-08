@@ -11,6 +11,8 @@ import {
   createAIService, 
   createLocalLLMAIService, 
   createOpenRouterAIService,
+  createFreeOpenRouterAIService,
+  createCodingOpenRouterAIService,
   type AIServiceConfig 
 } from '../aiService';
 import type { ChallengeContext } from '@/types/challenge';
@@ -130,6 +132,7 @@ describe('AIService', () => {
     it('should send message to OpenRouter in cloud mode', async () => {
       const cloudConfig: AIServiceConfig = {
         mode: 'cloud',
+        provider: 'openrouter',
         apiKey: 'openrouter-key',
         baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
         model: 'anthropic/claude-3-haiku'
@@ -629,6 +632,311 @@ describe('AIService', () => {
     });
   });
 
+  describe('Enhanced OpenRouter Integration', () => {
+    let openRouterService: AIService;
+
+    beforeEach(() => {
+      const openRouterConfig: AIServiceConfig = {
+        mode: 'cloud',
+        provider: 'openrouter',
+        apiKey: 'test-openrouter-key',
+        baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+        requestDelay: 500,
+        openRouter: {
+          useCase: 'coding',
+          enableFallback: true,
+          maxRetries: 3,
+          retryDelay: 1000
+        }
+      };
+      openRouterService = new AIService(openRouterConfig);
+    });
+
+    it('should try preferred models in order and succeed with first available', async () => {
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Response from preferred model'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any).mockResolvedValue(successResponse);
+
+      const result = await openRouterService.sendMessage(
+        'Help me refactor this code',
+        mockChallengeContext,
+        'user-123'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Response from preferred model');
+      expect(result.message?.context?.modelUsed).toBeDefined();
+      
+      // Should only call once since first model succeeded
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fallback to next model when first model fails', async () => {
+      const failureResponse = {
+        ok: false,
+        status: 402,
+        json: vi.fn().mockResolvedValue({
+          error: { message: 'Model requires payment' }
+        })
+      };
+      
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Response from fallback model'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(failureResponse) // First model fails
+        .mockResolvedValueOnce(successResponse); // Second model succeeds
+
+      const result = await openRouterService.sendMessage(
+        'Help me with testing',
+        mockChallengeContext,
+        'user-123'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Response from fallback model');
+      
+      // Should have tried 2 models
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle rate limiting with proper delays', async () => {
+      const rateLimitResponse = {
+        ok: false,
+        status: 429,
+        json: vi.fn().mockResolvedValue({
+          error: { message: 'Rate limit exceeded' }
+        })
+      };
+      
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Response after rate limit'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(rateLimitResponse) // Rate limited
+        .mockResolvedValueOnce(successResponse); // Success after delay
+
+      const startTime = Date.now();
+      
+      const result = await openRouterService.sendMessage(
+        'Test rate limiting',
+        mockChallengeContext
+      );
+
+      const elapsed = Date.now() - startTime;
+      
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Response after rate limit');
+      
+      // Should have applied delay between attempts (500ms request delay + retry delay)
+      expect(elapsed).toBeGreaterThanOrEqual(1000);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle model unavailability errors', async () => {
+      const modelUnavailableResponse = {
+        ok: false,
+        status: 400,
+        json: vi.fn().mockResolvedValue({
+          error: { message: 'Model not available' }
+        })
+      };
+      
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Response from available model'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(modelUnavailableResponse) // Model unavailable
+        .mockResolvedValueOnce(successResponse); // Fallback succeeds
+
+      const result = await openRouterService.sendMessage(
+        'Test model fallback',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Response from available model');
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fail when all preferred models are unavailable', async () => {
+      const failureResponse = {
+        ok: false,
+        status: 402,
+        json: vi.fn().mockResolvedValue({
+          error: { message: 'Model requires payment' }
+        })
+      };
+      
+      // Mock all models to fail
+      (global.fetch as any).mockResolvedValue(failureResponse);
+
+      const result = await openRouterService.sendMessage(
+        'Test all models fail',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('All OpenRouter models failed');
+      
+      // Should have tried multiple models
+      expect(global.fetch).toHaveBeenCalledTimes(7); // Default number of preferred models
+    });
+
+    it('should handle request timeouts', async () => {
+      // Mock timeout by never resolving
+      (global.fetch as any).mockImplementation(() => new Promise(() => {}));
+
+      const result = await openRouterService.sendMessage(
+        'Test timeout',
+        mockChallengeContext
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Request timeout');
+    });
+
+    it('should include cost optimization parameters in requests', async () => {
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{
+            message: {
+              content: 'Optimized response'
+            }
+          }]
+        })
+      };
+      
+      (global.fetch as any).mockResolvedValue(successResponse);
+
+      await openRouterService.sendMessage(
+        'Test cost optimization',
+        mockChallengeContext
+      );
+
+      const callArgs = (global.fetch as any).mock.calls[0][1];
+      const requestBody = JSON.parse(callArgs.body);
+      
+      expect(requestBody.top_p).toBe(0.9);
+      expect(requestBody.frequency_penalty).toBe(0.1);
+      expect(requestBody.presence_penalty).toBe(0.1);
+      expect(requestBody.temperature).toBe(0.7);
+      expect(requestBody.max_tokens).toBe(1000);
+    });
+
+    it('should use custom preferred models when configured', async () => {
+      const customConfig: AIServiceConfig = {
+        mode: 'cloud',
+        provider: 'openrouter',
+        apiKey: 'test-key',
+        openRouter: {
+          preferredModels: ['custom/model-1', 'custom/model-2'],
+          enableFallback: true,
+          maxRetries: 2
+        }
+      };
+      
+      const customService = new AIService(customConfig);
+      
+      const failureResponse = {
+        ok: false,
+        status: 402,
+        json: vi.fn().mockResolvedValue({ error: { message: 'Payment required' } })
+      };
+      
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Custom model response' } }]
+        })
+      };
+      
+      (global.fetch as any)
+        .mockResolvedValueOnce(failureResponse) // First custom model fails
+        .mockResolvedValueOnce(successResponse); // Second custom model succeeds
+
+      const result = await customService.sendMessage('Test custom models', mockChallengeContext);
+
+      expect(result.success).toBe(true);
+      expect(result.message?.content).toBe('Custom model response');
+      
+      // Verify the correct models were tried
+      const firstCall = (global.fetch as any).mock.calls[0][1];
+      const firstRequestBody = JSON.parse(firstCall.body);
+      expect(firstRequestBody.model).toBe('custom/model-1');
+      
+      const secondCall = (global.fetch as any).mock.calls[1][1];
+      const secondRequestBody = JSON.parse(secondCall.body);
+      expect(secondRequestBody.model).toBe('custom/model-2');
+    });
+
+    it('should prioritize configured model over preferred models', async () => {
+      const configWithSpecificModel: AIServiceConfig = {
+        mode: 'cloud',
+        provider: 'openrouter',
+        apiKey: 'test-key',
+        model: 'specific/configured-model',
+        openRouter: {
+          useCase: 'coding',
+          enableFallback: true
+        }
+      };
+      
+      const specificModelService = new AIService(configWithSpecificModel);
+      
+      const successResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Configured model response' } }]
+        })
+      };
+      
+      (global.fetch as any).mockResolvedValue(successResponse);
+
+      await specificModelService.sendMessage('Test specific model', mockChallengeContext);
+
+      const callArgs = (global.fetch as any).mock.calls[0][1];
+      const requestBody = JSON.parse(callArgs.body);
+      
+      // Should use the specifically configured model first
+      expect(requestBody.model).toBe('specific/configured-model');
+    });
+  });
+
   describe('Provider selection logic', () => {
     it('should use kiro provider by default in local mode', async () => {
       const defaultConfig: AIServiceConfig = {
@@ -720,25 +1028,27 @@ describe('AIService factory functions', () => {
     expect(service).toBeInstanceOf(AIService);
   });
 
-  it('should create OpenRouter service', () => {
-    const service = createOpenRouterAIService('test-key', 'test-model');
+  it('should create OpenRouter service with enhanced options', () => {
+    const service = createOpenRouterAIService('test-key', 'test-model', {
+      useCase: 'coding',
+      enableFallback: true,
+      maxRetries: 5
+    });
+    expect(service).toBeInstanceOf(AIService);
+  });
+
+  it('should create free tier optimized OpenRouter service', () => {
+    const service = createFreeOpenRouterAIService('test-key');
+    expect(service).toBeInstanceOf(AIService);
+  });
+
+  it('should create coding-focused OpenRouter service', () => {
+    const service = createCodingOpenRouterAIService('test-key');
     expect(service).toBeInstanceOf(AIService);
   });
 
   it('should auto-initialize service when getting without creation', () => {
-    // Mock environment variables
-    vi.stubGlobal('import', {
-      meta: {
-        env: {
-          VITE_AI_MODE: 'local',
-          VITE_AI_PROVIDER: 'kiro'
-        }
-      }
-    });
-
-    const service = createAIService(); // Should use environment config
+    const service = createAIService(); // Should use default config
     expect(service).toBeInstanceOf(AIService);
-    
-    vi.unstubAllGlobals();
   });
 });

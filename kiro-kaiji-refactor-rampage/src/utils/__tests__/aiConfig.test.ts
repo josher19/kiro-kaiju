@@ -416,7 +416,14 @@ describe('aiConfig', () => {
         apiKey: 'prod-api-key',
         baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
         model: 'openai/gpt-oss-20b',
-        requestDelay: 1000
+        requestDelay: 1000,
+        openRouter: {
+          useCase: 'balanced',
+          preferredModels: undefined,
+          enableFallback: true,
+          maxRetries: 3,
+          retryDelay: 1000
+        }
       });
     });
 

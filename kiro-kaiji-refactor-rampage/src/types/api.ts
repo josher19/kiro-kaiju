@@ -50,6 +50,7 @@ export interface AIChatMessage {
   context?: {
     challengeId: string;
     currentCode: string;
+    modelUsed?: string;
   };
 }
 
