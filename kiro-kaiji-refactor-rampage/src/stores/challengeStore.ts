@@ -20,6 +20,7 @@ export const useChallengeStore = defineStore('challenge', () => {
   // State
   const currentConfig = ref<Partial<ChallengeConfig>>({});
   const currentChallenge = ref<Challenge | null>(null);
+  const activeChallenges = ref<Challenge[]>([]);
   const isGenerating = ref(false);
   const generationError = ref<string | null>(null);
 
@@ -107,7 +108,7 @@ export const useChallengeStore = defineStore('challenge', () => {
   const generateChallenge = async () => {
     if (!isConfigValid.value) {
       generationError.value = 'Please complete all required fields';
-      return;
+      return null;
     }
 
     isGenerating.value = true;
@@ -121,22 +122,55 @@ export const useChallengeStore = defineStore('challenge', () => {
         config: currentConfig.value as ChallengeConfig
       });
       
-      currentChallenge.value = response.challenge;
+      const newChallenge = response.challenge;
+      
+      // Add to active challenges
+      activeChallenges.value.push(newChallenge);
+      
+      // Set as current challenge
+      currentChallenge.value = newChallenge;
       
       // Reset config after successful generation
-      // currentConfig.value = {};
+      currentConfig.value = {};
+      
+      return newChallenge;
     } catch (error) {
       generationError.value = error instanceof Error ? error.message : 'Failed to generate challenge';
       console.error('Challenge generation error:', error);
+      return null;
     } finally {
       isGenerating.value = false;
     }
+  };
+
+  const setCurrentChallenge = (challenge: Challenge) => {
+    currentChallenge.value = challenge;
+  };
+
+  const removeChallenge = (challengeId: string) => {
+    const index = activeChallenges.value.findIndex(c => c.id === challengeId);
+    if (index !== -1) {
+      activeChallenges.value.splice(index, 1);
+      
+      // If we removed the current challenge, set a new one or null
+      if (currentChallenge.value?.id === challengeId) {
+        currentChallenge.value = activeChallenges.value.length > 0 
+          ? activeChallenges.value[0] 
+          : null;
+      }
+    }
+  };
+
+  const clearAllChallenges = () => {
+    activeChallenges.value = [];
+    currentChallenge.value = null;
   };
 
   return {
     // State
     currentConfig,
     currentChallenge,
+    activeChallenges,
     isGenerating,
     generationError,
     
@@ -151,6 +185,9 @@ export const useChallengeStore = defineStore('challenge', () => {
     updateCategory,
     updateDifficulty,
     resetConfig,
-    generateChallenge
+    generateChallenge,
+    setCurrentChallenge,
+    removeChallenge,
+    clearAllChallenges
   };
 });

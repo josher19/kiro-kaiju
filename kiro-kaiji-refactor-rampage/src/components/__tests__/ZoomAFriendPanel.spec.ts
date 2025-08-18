@@ -2,6 +2,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
+import type { CodeComment } from '@/types/team'
+
+// Mock the ZoomAFriendService
+vi.mock('@/services/zoomAFriendService', () => ({
+  getZoomAFriendService: () => ({
+    generateRoleBasedAdvice: vi.fn().mockResolvedValue({
+      teamMember: TEAM_MEMBERS[TeamRole.QA],
+      message: 'Puff puff! AI-generated response!',
+      animalSounds: ['puff', 'bubble'],
+      keyTerms: ['testing', 'quality'],
+      advice: 'AI-generated advice',
+      mood: 'excited',
+      timestamp: new Date()
+    }),
+    generateCodeComments: vi.fn().mockResolvedValue([
+      {
+        lineNumber: 1,
+        comment: 'AI-generated comment',
+        type: 'suggestion',
+        role: TeamRole.QA
+      }
+    ]),
+    playSoundEffect: vi.fn(),
+    addCodeComments: vi.fn().mockReturnValue('// AI-generated comment\noriginal code')
+  })
+}))
 
 describe('ZoomAFriendPanel', () => {
   let wrapper: VueWrapper<any>
@@ -375,6 +401,175 @@ describe('ZoomAFriendPanel', () => {
     })
   })
 
+  describe('AI-Powered Features', () => {
+    beforeEach(async () => {
+      // Start a session
+      const qaCard = wrapper.findAll('.team-member-card')[0]
+      await qaCard.trigger('click')
+      await wrapper.vm.$nextTick()
+    })
+
+    it('displays action buttons for code comments and review', () => {
+      const actionButtons = wrapper.find('.action-buttons')
+      expect(actionButtons.exists()).toBe(true)
+      
+      const codeCommentsButton = wrapper.findAll('button').find(btn => btn.text().includes('Add Code Comments'))
+      const reviewButton = wrapper.findAll('button').find(btn => btn.text().includes('Review Code'))
+      
+      expect(codeCommentsButton).toBeTruthy()
+      expect(reviewButton).toBeTruthy()
+    })
+
+    it('generates code comments when button is clicked', async () => {
+      const codeCommentsButton = wrapper.findAll('button').find(btn => btn.text().includes('Add Code Comments'))
+      
+      await codeCommentsButton!.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should emit code-comments-generated event
+      expect(wrapper.emitted('code-comments-generated')).toBeTruthy()
+      
+      // Should add a message about generated comments
+      const messages = wrapper.findAll('.message')
+      const lastMessage = messages[messages.length - 1]
+      expect(lastMessage.text()).toContain('code comments')
+    })
+
+    it('triggers code review when review button is clicked', async () => {
+      const reviewButton = wrapper.findAll('button').find(btn => btn.text().includes('Review Code'))
+      
+      await reviewButton!.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should trigger a message asking for code review
+      const input = wrapper.find('input[placeholder="Ask for advice..."]')
+      expect((input.element as HTMLInputElement).value).toContain('review')
+    })
+
+    it('uses AI service for generating responses', async () => {
+      const input = wrapper.find('input[placeholder="Ask for advice..."]')
+      const sendButtons = wrapper.findAll('button').filter(btn => btn.text().includes('Send'))
+      const sendButton = sendButtons[0]
+      
+      await input.setValue('How can I improve this code?')
+      await sendButton.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should have sent a message with AI-generated content
+      expect(wrapper.emitted('message-sent')).toBeTruthy()
+      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0]
+      expect(sentMessage).toHaveProperty('message')
+      expect(sentMessage.message).toContain('AI-generated')
+    })
+  })
+
+  describe('Code Comments Generation', () => {
+    beforeEach(async () => {
+      // Start a session
+      const qaCard = wrapper.findAll('.team-member-card')[0]
+      await qaCard.trigger('click')
+      await wrapper.vm.$nextTick()
+    })
+
+    it('generates role-specific code comments', async () => {
+      const codeCommentsButton = wrapper.findAll('button').find(btn => btn.text().includes('Add Code Comments'))
+      
+      await codeCommentsButton!.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      const emittedComments = wrapper.emitted('code-comments-generated')?.[0]?.[0] as CodeComment[]
+      expect(emittedComments).toBeTruthy()
+      expect(Array.isArray(emittedComments)).toBe(true)
+      expect(emittedComments.length).toBeGreaterThan(0)
+      
+      // Check comment structure
+      const comment = emittedComments[0]
+      expect(comment).toHaveProperty('lineNumber')
+      expect(comment).toHaveProperty('comment')
+      expect(comment).toHaveProperty('type')
+      expect(comment).toHaveProperty('role')
+    })
+
+    it('includes code comments in dialog responses when requested', async () => {
+      const input = wrapper.find('input[placeholder="Ask for advice..."]')
+      const sendButtons = wrapper.findAll('button').filter(btn => btn.text().includes('Send'))
+      const sendButton = sendButtons[0]
+      
+      await input.setValue('Please add comments to my code')
+      await sendButton.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should emit both message-sent and code-comments-generated events
+      expect(wrapper.emitted('message-sent')).toBeTruthy()
+      expect(wrapper.emitted('code-comments-generated')).toBeTruthy()
+      
+      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0]
+      expect(sentMessage.message).toContain('code comments')
+    })
+
+    it('handles code comment generation errors gracefully', async () => {
+      // Mock the service to throw an error
+      const mockService = vi.mocked(await import('@/services/zoomAFriendService'))
+      mockService.getZoomAFriendService().generateCodeComments = vi.fn().mockRejectedValue(new Error('AI service error'))
+      
+      const codeCommentsButton = wrapper.findAll('button').find(btn => btn.text().includes('Add Code Comments'))
+      
+      await codeCommentsButton!.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should still add a message explaining the error
+      const messages = wrapper.findAll('.message')
+      const lastMessage = messages[messages.length - 1]
+      expect(lastMessage.text()).toContain('trouble')
+    })
+  })
+
+  describe('Sound Effects Integration', () => {
+    beforeEach(async () => {
+      // Start a session
+      const qaCard = wrapper.findAll('.team-member-card')[0]
+      await qaCard.trigger('click')
+      await wrapper.vm.$nextTick()
+    })
+
+    it('plays sound effects for team member interactions', async () => {
+      const mockService = vi.mocked(await import('@/services/zoomAFriendService'))
+      const playSoundEffectSpy = mockService.getZoomAFriendService().playSoundEffect
+      
+      // Should have played greeting sound when session started
+      expect(playSoundEffectSpy).toHaveBeenCalledWith(expect.any(Object), 'greeting')
+    })
+
+    it('plays sound effects when generating code comments', async () => {
+      const mockService = vi.mocked(await import('@/services/zoomAFriendService'))
+      const playSoundEffectSpy = mockService.getZoomAFriendService().playSoundEffect
+      
+      const codeCommentsButton = wrapper.findAll('button').find(btn => btn.text().includes('Add Code Comments'))
+      
+      await codeCommentsButton!.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should play comment sound effect
+      expect(playSoundEffectSpy).toHaveBeenCalledWith(expect.any(Object), 'comment')
+    })
+
+    it('plays sound effects when sending advice messages', async () => {
+      const mockService = vi.mocked(await import('@/services/zoomAFriendService'))
+      const playSoundEffectSpy = mockService.getZoomAFriendService().playSoundEffect
+      
+      const input = wrapper.find('input[placeholder="Ask for advice..."]')
+      const sendButtons = wrapper.findAll('button').filter(btn => btn.text().includes('Send'))
+      const sendButton = sendButtons[0]
+      
+      await input.setValue('Help me with this code')
+      await sendButton.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should play advice sound effect
+      expect(playSoundEffectSpy).toHaveBeenCalledWith(expect.any(Object), 'advice')
+    })
+  })
+
   describe('Error Handling', () => {
     it('handles empty input gracefully', async () => {
       const qaCard = wrapper.findAll('.team-member-card')[0]
@@ -402,6 +597,25 @@ describe('ZoomAFriendPanel', () => {
       
       // Should be disabled while loading
       expect(sendButton.attributes('disabled')).toBeDefined()
+    })
+
+    it('falls back to predefined responses when AI service fails', async () => {
+      // Mock the service to throw an error
+      const mockService = vi.mocked(await import('@/services/zoomAFriendService'))
+      mockService.getZoomAFriendService().generateRoleBasedAdvice = vi.fn().mockRejectedValue(new Error('AI service error'))
+      
+      const input = wrapper.find('input[placeholder="Ask for advice..."]')
+      const sendButtons = wrapper.findAll('button').filter(btn => btn.text().includes('Send'))
+      const sendButton = sendButtons[0]
+      
+      await input.setValue('Help me with this code')
+      await sendButton.trigger('click')
+      await wrapper.vm.$nextTick()
+      
+      // Should still send a message (fallback response)
+      expect(wrapper.emitted('message-sent')).toBeTruthy()
+      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0]
+      expect(sentMessage).toHaveProperty('message')
     })
   })
 })

@@ -171,7 +171,10 @@
                     Select a Kaiju monster to battle and improve your coding skills
                   </p>
                 </div>
-                <ChallengeSelector @challenge-generated="handleChallengeGenerated" />
+                <ChallengeSelector 
+                  @challenge-generated="handleChallengeGenerated" 
+                  @challenge-selected="handleChallengeSelected" 
+                />
               </div>
             </div>
             
@@ -446,6 +449,11 @@ const navigateToView = (viewId: string) => {
 }
 
 const handleChallengeGenerated = (challenge: Challenge) => {
+  currentCode.value = challenge.initialCode
+  appStore.setCurrentView('coding')
+}
+
+const handleChallengeSelected = (challenge: Challenge) => {
   currentCode.value = challenge.initialCode
   appStore.setCurrentView('coding')
 }

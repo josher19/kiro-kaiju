@@ -1,8 +1,71 @@
 <template>
-  <div class="challenge-selector bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
+  <div class="challenge-selector bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
     <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
       Select Your Challenge
     </h2>
+
+    <!-- Active Challenges Section -->
+    <div v-if="activeChallenges.length > 0" class="mb-8">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+        <span class="text-xl mr-2">🎯</span>
+        Active Challenges ({{ activeChallenges.length }})
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div
+          v-for="challenge in activeChallenges"
+          :key="challenge.id"
+          class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 transition-all duration-200 hover:shadow-md cursor-pointer"
+          :class="currentChallenge?.id === challenge.id 
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'"
+          @click="handleChallengeSelect(challenge)"
+        >
+          <div class="flex items-start justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-2xl">{{ challenge.kaiju.avatar }}</span>
+              <div class="flex-1 min-w-0">
+                <h4 class="font-medium text-gray-900 dark:text-white truncate">
+                  {{ challenge.kaiju.name }}
+                </h4>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ getLanguageLabel(challenge.config.language) }}
+                  <span v-if="challenge.config.framework">
+                    • {{ getFrameworkLabel(challenge.config.framework) }}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <button
+              @click.stop="handleChallengeRemove(challenge.id)"
+              class="text-gray-400 hover:text-red-500 transition-colors p-1"
+              title="Remove challenge"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-300">
+              {{ getCategoryLabel(challenge.config.category) }}
+            </span>
+            <span class="text-gray-500 dark:text-gray-400">
+              Level {{ challenge.config.difficulty }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Clear All Button -->
+      <div class="flex justify-end">
+        <button
+          @click="handleClearAll"
+          class="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+        >
+          Clear All Challenges
+        </button>
+      </div>
+    </div>
     
     <form @submit.prevent="handleGenerateChallenge" class="space-y-6">
       <!-- Programming Language Selection -->
@@ -143,8 +206,15 @@ import {
   ProgrammingLanguage, 
   Framework, 
   ChallengeCategory, 
-  DifficultyLevel 
+  DifficultyLevel,
+  type Challenge
 } from '@/types';
+
+// Define emits
+const emit = defineEmits<{
+  'challenge-generated': [challenge: Challenge];
+  'challenge-selected': [challenge: Challenge];
+}>();
 
 // Store
 const challengeStore = useChallengeStore();
@@ -156,7 +226,15 @@ const selectedCategory = ref<ChallengeCategory | ''>('');
 const selectedDifficulty = ref<DifficultyLevel | ''>('');
 
 // Computed properties from store
-const { availableFrameworks, isConfigValid, canGenerate, isGenerating, generationError } = storeToRefs(challengeStore);
+const { 
+  availableFrameworks, 
+  isConfigValid, 
+  canGenerate, 
+  isGenerating, 
+  generationError,
+  activeChallenges,
+  currentChallenge
+} = storeToRefs(challengeStore);
 
 // Available options for dropdowns
 const availableLanguages = computed(() => [
@@ -211,10 +289,34 @@ const availableDifficulties = computed(() => [
   { value: DifficultyLevel.LEGENDARY, label: 'Legendary (5/5)' }
 ]);
 
-// Helper function to get language label
+// Helper functions to get labels
 const getLanguageLabel = (language: ProgrammingLanguage) => {
   const languageOption = availableLanguages.value.find(l => l.value === language);
   return languageOption?.label || language;
+};
+
+const getFrameworkLabel = (framework: Framework) => {
+  const frameworkLabels: Record<Framework, string> = {
+    [Framework.VUE]: 'Vue.js',
+    [Framework.REACT]: 'React',
+    [Framework.ANGULAR]: 'Angular',
+    [Framework.SVELTE]: 'Svelte',
+    [Framework.NODE]: 'Node.js',
+    [Framework.EXPRESS]: 'Express.js',
+    [Framework.DJANGO]: 'Django',
+    [Framework.FLASK]: 'Flask',
+    [Framework.FASTAPI]: 'FastAPI',
+    [Framework.SPRING]: 'Spring',
+    [Framework.SPRING_BOOT]: 'Spring Boot',
+    [Framework.DOTNET]: '.NET',
+    [Framework.ASP_NET]: 'ASP.NET'
+  };
+  return frameworkLabels[framework] || framework;
+};
+
+const getCategoryLabel = (category: ChallengeCategory) => {
+  const categoryOption = availableCategories.value.find(c => c.value === category);
+  return categoryOption?.label || category;
 };
 
 // Event handlers
@@ -225,7 +327,25 @@ const handleLanguageChange = () => {
 };
 
 const handleGenerateChallenge = async () => {
-  await challengeStore.generateChallenge();
+  const newChallenge = await challengeStore.generateChallenge();
+  if (newChallenge) {
+    // Emit event for smooth transition to coding view
+    emit('challenge-generated', newChallenge);
+  }
+};
+
+const handleChallengeSelect = (challenge: Challenge) => {
+  challengeStore.setCurrentChallenge(challenge);
+  // Emit event for smooth transition to coding view
+  emit('challenge-selected', challenge);
+};
+
+const handleChallengeRemove = (challengeId: string) => {
+  challengeStore.removeChallenge(challengeId);
+};
+
+const handleClearAll = () => {
+  challengeStore.clearAllChallenges();
 };
 
 const handleReset = () => {

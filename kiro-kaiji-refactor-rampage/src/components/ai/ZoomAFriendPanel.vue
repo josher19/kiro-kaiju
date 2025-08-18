@@ -90,6 +90,28 @@
         </div>
       </div>
 
+      <!-- Action Buttons -->
+      <div class="action-buttons mb-4">
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="generateCodeComments"
+            :disabled="isLoading"
+            class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center space-x-1"
+          >
+            <span>💬</span>
+            <span>Add Code Comments</span>
+          </button>
+          <button
+            @click="askForCodeReview"
+            :disabled="isLoading"
+            class="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center space-x-1"
+          >
+            <span>🔍</span>
+            <span>Review Code</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Input Area -->
       <div class="input-area">
         <div class="flex space-x-2">
@@ -123,7 +145,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
-import type { TeamMember, DialogResponse, ZoomSession, DialogContext } from '@/types/team'
+import type { TeamMember, DialogResponse, ZoomSession, DialogContext, CodeComment } from '@/types/team'
+import { getZoomAFriendService } from '@/services/zoomAFriendService'
 
 interface Props {
   challengeId: string
@@ -136,6 +159,7 @@ interface Emits {
   (e: 'session-started', session: ZoomSession): void
   (e: 'session-ended', session: ZoomSession): void
   (e: 'message-sent', message: DialogResponse): void
+  (e: 'code-comments-generated', comments: CodeComment[]): void
 }
 
 const props = defineProps<Props>()
@@ -220,59 +244,178 @@ const endSession = () => {
   }
 }
 
-const generateInitialGreeting = async (member: TeamMember): Promise<DialogResponse> => {
-  const greetings = {
-    [TeamRole.QA]: [
-      "Puff puff! I'm here to help you catch those sneaky bugs! Bubble bubble, what code are we testing today?",
-      "Blub blub! Quality Assurance Pufferfish reporting for duty! Puff puff, let's make sure this code is rock solid!",
-      "Whoosh! I can already smell some potential issues in the water... I mean, code! Bubble bubble!"
-    ],
-    [TeamRole.ARCHITECT]: [
-      "Hoot hoot! Wise Architect Owl at your service! Let me take a bird's eye view of your architecture... Hoo hoo!",
-      "Flutter flutter! I see you need some architectural guidance! Hoot hoot, let's build something magnificent!",
-      "Screech! From up here in my tree, I can see the big picture! Hoot hoot, what design challenges are we facing?"
-    ],
-    [TeamRole.PRODUCT_OWNER]: [
-      "Oink oink! Product Owner Pig here! Snort snort, let's make sure we're building what the users actually need!",
-      "Grunt grunt! I'm here to help clarify those requirements! Oink oink, business value is my specialty!",
-      "Squeal! Time to get down and dirty with the requirements! Snort snort, what are we trying to achieve?"
-    ],
-    [TeamRole.SENIOR_DEVELOPER]: [
-      "Meow meow! Senior Developer Cat reporting for duty! Purr purr, let's make this code purr-fect!",
-      "Mrow! I can sense some code that needs refactoring... Purr purr, clean code is the way!",
-      "Hiss! Don't worry, I'm not angry - just passionate about good code! Meow meow, let's get started!"
-    ]
+const generateCodeComments = async () => {
+  if (!activeSession.value || isLoading.value) return
+  
+  isLoading.value = true
+  
+  try {
+    const zoomService = getZoomAFriendService()
+    
+    // Play comment sound effect
+    zoomService.playSoundEffect(activeSession.value.teamMember, 'comment')
+    
+    const context: DialogContext = {
+      challengeId: props.challengeId,
+      currentCode: props.currentCode,
+      userQuestion: 'Please add code comments from your perspective',
+      codeIssues: props.codeIssues,
+      requirements: props.requirements
+    }
+    
+    const codeComments = await zoomService.generateCodeComments(
+      props.currentCode,
+      activeSession.value.teamMember,
+      context
+    )
+    
+    if (codeComments.length > 0) {
+      emit('code-comments-generated', codeComments)
+      
+      // Add a message about the generated comments
+      const commentMessage: DialogResponse = {
+        teamMember: activeSession.value.teamMember,
+        message: `💬 I've added ${codeComments.length} code comments from my ${activeSession.value.teamMember.title.toLowerCase()} perspective! These comments highlight areas I think are important for you to consider.`,
+        animalSounds: activeSession.value.teamMember.animalSounds.slice(0, 2),
+        keyTerms: ['code comments', 'review', 'analysis'],
+        advice: 'Review the comments I added to understand my perspective on this code!',
+        mood: 'excited',
+        codeComments,
+        timestamp: new Date()
+      }
+      
+      activeSession.value.messages.push(commentMessage)
+      emit('message-sent', commentMessage)
+    } else {
+      // Add a message if no comments were generated
+      const noCommentsMessage: DialogResponse = {
+        teamMember: activeSession.value.teamMember,
+        message: `Hmm, I couldn't generate specific comments for this code right now. But I'm still here to help if you have specific questions!`,
+        animalSounds: activeSession.value.teamMember.animalSounds.slice(0, 1),
+        keyTerms: ['help', 'questions'],
+        advice: 'Feel free to ask me specific questions about the code!',
+        mood: 'thoughtful',
+        timestamp: new Date()
+      }
+      
+      activeSession.value.messages.push(noCommentsMessage)
+      emit('message-sent', noCommentsMessage)
+    }
+  } catch (error) {
+    console.error('Failed to generate code comments:', error)
+    
+    // Add error message
+    const errorMessage: DialogResponse = {
+      teamMember: activeSession.value.teamMember,
+      message: `Oops! I had trouble generating code comments right now. But I can still help you with specific questions about your code!`,
+      animalSounds: activeSession.value.teamMember.animalSounds.slice(0, 1),
+      keyTerms: ['help', 'questions'],
+      advice: 'Try asking me specific questions about parts of your code!',
+      mood: 'concerned',
+      timestamp: new Date()
+    }
+    
+    activeSession.value.messages.push(errorMessage)
+    emit('message-sent', errorMessage)
+  } finally {
+    isLoading.value = false
   }
+}
+
+const askForCodeReview = async () => {
+  if (!activeSession.value || isLoading.value) return
   
-  const roleGreetings = greetings[member.role]
-  const greeting = roleGreetings[Math.floor(Math.random() * roleGreetings.length)]
-  
-  return {
-    teamMember: member,
-    message: greeting,
-    animalSounds: member.animalSounds.slice(0, 2),
-    keyTerms: member.keyTerms.slice(0, 3),
-    advice: `I'm here to help with ${member.specialties.join(', ').toLowerCase()}!`,
-    mood: 'excited',
-    timestamp: new Date()
+  // Simulate user asking for a code review
+  userInput.value = 'Please review my code and tell me what you think'
+  await sendMessage()
+}
+
+const generateInitialGreeting = async (member: TeamMember): Promise<DialogResponse> => {
+  try {
+    const zoomService = getZoomAFriendService()
+    
+    // Play greeting sound effect
+    zoomService.playSoundEffect(member, 'greeting')
+    
+    const context: DialogContext = {
+      challengeId: props.challengeId,
+      currentCode: props.currentCode,
+      userQuestion: 'Hello! I need help with this code.',
+      codeIssues: props.codeIssues,
+      requirements: props.requirements
+    }
+    
+    return await zoomService.generateRoleBasedAdvice(member, context)
+  } catch (error) {
+    console.warn('Failed to generate AI greeting, using fallback:', error)
+    
+    // Fallback to predefined greetings
+    const greetings = {
+      [TeamRole.QA]: "Puff puff! I'm here to help you catch those sneaky bugs! Bubble bubble, what code are we testing today?",
+      [TeamRole.ARCHITECT]: "Hoot hoot! Wise Architect Owl at your service! Let me take a bird's eye view of your architecture... Hoo hoo!",
+      [TeamRole.PRODUCT_OWNER]: "Oink oink! Product Owner Pig here! Snort snort, let's make sure we're building what the users actually need!",
+      [TeamRole.SENIOR_DEVELOPER]: "Meow meow! Senior Developer Cat reporting for duty! Purr purr, let's make this code purr-fect!"
+    }
+    
+    return {
+      teamMember: member,
+      message: greetings[member.role],
+      animalSounds: member.animalSounds.slice(0, 2),
+      keyTerms: member.keyTerms.slice(0, 3),
+      advice: `I'm here to help with ${member.specialties.join(', ').toLowerCase()}!`,
+      mood: 'excited',
+      timestamp: new Date()
+    }
   }
 }
 
 const generateDialogResponse = async (member: TeamMember, context: DialogContext): Promise<DialogResponse> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000))
-  
-  const responses = generateRoleSpecificResponse(member, context)
-  const response = responses[Math.floor(Math.random() * responses.length)]
-  
-  return {
-    teamMember: member,
-    message: response.message,
-    animalSounds: response.sounds,
-    keyTerms: response.keyTerms,
-    advice: response.advice,
-    mood: response.mood,
-    timestamp: new Date()
+  try {
+    const zoomService = getZoomAFriendService()
+    
+    // Play advice sound effect
+    zoomService.playSoundEffect(member, 'advice')
+    
+    // Generate AI-powered response
+    const response = await zoomService.generateRoleBasedAdvice(member, context)
+    
+    // Generate code comments if user is asking about code
+    if (context.userQuestion.toLowerCase().includes('comment') || 
+        context.userQuestion.toLowerCase().includes('review') ||
+        context.userQuestion.toLowerCase().includes('analyze')) {
+      
+      const codeComments = await zoomService.generateCodeComments(
+        context.currentCode,
+        member,
+        context
+      )
+      
+      if (codeComments.length > 0) {
+        response.codeComments = codeComments
+        emit('code-comments-generated', codeComments)
+        
+        // Add information about code comments to the response
+        response.message += `\n\n💬 I've also added ${codeComments.length} code comments to help you understand my perspective on this code!`
+      }
+    }
+    
+    return response
+  } catch (error) {
+    console.warn('Failed to generate AI response, using fallback:', error)
+    
+    // Fallback to predefined responses
+    const responses = generateRoleSpecificResponse(member, context)
+    const response = responses[Math.floor(Math.random() * responses.length)]
+    
+    return {
+      teamMember: member,
+      message: response.message,
+      animalSounds: response.sounds,
+      keyTerms: response.keyTerms,
+      advice: response.advice,
+      mood: response.mood,
+      timestamp: new Date()
+    }
   }
 }
 

@@ -40,6 +40,13 @@ export interface DialogContext {
   requirements?: string[];
 }
 
+export interface CodeComment {
+  lineNumber: number;
+  comment: string;
+  type: 'suggestion' | 'warning' | 'info' | 'improvement';
+  role: TeamRole;
+}
+
 export interface DialogResponse {
   teamMember: TeamMember;
   message: string;
@@ -48,6 +55,7 @@ export interface DialogResponse {
   advice: string;
   mood: 'happy' | 'concerned' | 'excited' | 'frustrated' | 'thoughtful';
   soundEffect?: string;
+  codeComments?: CodeComment[];
   timestamp: Date;
 }
 
