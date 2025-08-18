@@ -89,6 +89,12 @@ interface ChallengeSelector {
   onConfigChange: (config: ChallengeConfig) => void;
   onGenerateChallenge: () => void;
   isLoading: boolean;
+  activeChallenges: Challenge[]; // Support multiple active challenges
+}
+
+interface ChallengeTransition {
+  smoothTransition: boolean; // Ensure smooth transition to challenge
+  autoOpen: boolean; // Automatically open challenge after generation
 }
 ```
 
@@ -269,6 +275,20 @@ interface DialogResponse {
   keyTerms: string[];
   advice: string;
   mood: 'happy' | 'concerned' | 'excited' | 'frustrated';
+  codeComments?: CodeComment[]; // AI-generated code comments for existing code
+}
+
+interface CodeComment {
+  lineNumber: number;
+  comment: string;
+  type: 'suggestion' | 'warning' | 'info' | 'improvement';
+  role: TeamRole; // Which team member provided this comment
+}
+
+interface ZoomAFriendService {
+  generateRoleBasedAdvice: (code: string, role: TeamRole) => Promise<DialogResponse>;
+  addCodeComments: (code: string, comments: CodeComment[]) => string;
+  getAIDialogForRole: (role: TeamRole, context: ChallengeContext) => Promise<string>;
 }
 ```
 

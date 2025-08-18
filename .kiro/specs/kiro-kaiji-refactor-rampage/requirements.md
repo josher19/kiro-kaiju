@@ -8,14 +8,14 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 
 ### Requirement 1
 
-**User Story:** As a developer learning refactoring skills, I want to select programming challenges based on language, framework, category, and difficulty, so that I can practice relevant skills at my level.
+**User Story:** As a developer learning refactoring skills, I want to select programming challenges based on language, framework, category, and difficulty, so that I can practice relevant skills at my level. It should smoothly transition to the challenge once it is created. I can have multiple challenges active at one time.
 
 #### Acceptance Criteria
 
 1. WHEN a user visits the challenge selection page THEN the system SHALL display dropdown menus for programming language, front-end framework (optional), programming category, and difficulty level
 2. WHEN a user selects a programming language THEN the system SHALL update available framework options to match the selected language
 3. WHEN a user selects all required parameters THEN the system SHALL enable the "Generate Challenge" button
-4. WHEN a user clicks "Generate Challenge" THEN the system SHALL create a themed coding challenge with appropriate Kaiju monster and problematic code
+4. WHEN a user clicks "Generate Challenge" THEN the system SHALL create a themed coding challenge with appropriate Kaiju monster and problematic code and open the challenge.
 
 ### Requirement 2
 
@@ -44,15 +44,15 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 
 ### Requirement 4
 
-**User Story:** As a user seeking additional guidance, I want to "Zoom-a-Friend" and get advice from different team role avatars, so that I can understand various perspectives on code quality and requirements.
+**User Story:** As a user seeking additional guidance, I want to "Zoom-a-Friend" and get advice from different team role avatars, so that I can understand various perspectives on code quality and requirements. The advice will be provided by the AI given different roles, and code comments added to the existing code.
 
 #### Acceptance Criteria
 
 1. WHEN a user clicks "Zoom-a-Friend" THEN the system SHALL display a selection of animal icons with role titles underneath for user selection
-2. WHEN a user selects Quality Assurance (Pufferfish) THEN the system SHALL provide feedback focused on defects and bugs with pufferfish-themed dialog
-3. WHEN a user selects Architect (Owl) THEN the system SHALL provide architectural advice with owl-themed dialog including "Architecture" and "Redundancy"
-4. WHEN a user selects Product Owner (Pig) THEN the system SHALL provide requirements clarification with pig-themed dialog
-5. WHEN a user selects Senior Developer (Cat) THEN the system SHALL provide coding best practices with cat-themed dialog
+2. WHEN a user selects Quality Assurance (Pufferfish) THEN the system SHALL provide feedback focused on defects and bugs AI dialog
+3. WHEN a user selects Architect (Owl) THEN the system SHALL provide architectural advice with owl-themed AI dialog including "Architecture" and "Redundancy"
+4. WHEN a user selects Product Owner (Pig) THEN the system SHALL provide requirements clarification with AI Product Owner dialog
+5. WHEN a user selects Senior Developer (Cat) THEN the system SHALL provide coding best practices with Software Development AI themed dialog
 6. WHEN any avatar provides advice THEN the dialog SHALL consist mostly of animal sounds with key technical terms interspersed
 
 ### Requirement 5

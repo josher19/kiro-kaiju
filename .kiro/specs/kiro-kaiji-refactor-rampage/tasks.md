@@ -24,12 +24,14 @@
   - Write unit tests for each Kaiju monster type
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [x] 4. Create Challenge Selector Component
+- [ ] 4. Create Challenge Selector Component
   - Build Vue component with dropdowns for language, framework, category, difficulty
   - Implement dynamic framework filtering based on selected language
   - Add form validation and "Generate Challenge" button state management
+  - Implement support for multiple active challenges simultaneously
+  - Add smooth transition functionality to automatically open generated challenges
   - Integrate with Pinia store for challenge configuration
-  - Write component tests for user interactions
+  - Write component tests for user interactions and multi-challenge support
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
 - [x] 5. Integrate Monaco Code Editor
@@ -59,14 +61,15 @@
   - Write tests for chat functionality and API integration
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [x] 8. Create Zoom-a-Friend Panel Component
+- [ ] 8. Create Zoom-a-Friend Panel Component
   - Build team member selection interface with animal icons and role titles
-  - Implement Quality Assurance (Pufferfish) dialog with bug-focused responses
-  - Implement Architect (Owl) dialog with architectural advice
-  - Implement Product Owner (Pig) dialog with requirements clarification
-  - Implement Senior Developer (Cat) dialog with coding best practices
-  - Create animal-themed dialog generation with sound effects and key terms
-  - Write tests for each team member's dialog patterns
+  - Implement Quality Assurance (Pufferfish) dialog with bug-focused AI responses
+  - Implement Architect (Owl) dialog with architectural AI advice including "Architecture" and "Redundancy"
+  - Implement Product Owner (Pig) dialog with requirements clarification using AI Product Owner dialog
+  - Implement Senior Developer (Cat) dialog with coding best practices using Software Development AI themed dialog
+  - Create animal-themed dialog generation with sound effects and key terms interspersed
+  - Implement AI-generated code comments functionality that adds role-specific comments to existing code
+  - Write tests for each team member's dialog patterns and code comment generation
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
 - [x] 9. Build Code Evaluation System
@@ -124,7 +127,7 @@
   - Write integration tests for OpenRouter API and model switching
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [-] 15. Fix Build Process and Ensure Test Suite Passes
+- [x] 15. Fix Build Process and Ensure Test Suite Passes
   - DONE: Resolve all TypeScript compilation errors and type issues
   - DONE: Fix Vite build configuration and dependency conflicts
   - DONE: Address Monaco Editor bundle size and import issues
