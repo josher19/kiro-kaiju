@@ -241,7 +241,10 @@
                     :model-value="currentCode"
                     :language="getEditorLanguage(currentChallenge.config.language)"
                     :theme="isDarkMode ? 'dark' : 'light'"
+                    :show-grading-button="true"
+                    :is-grading-in-progress="isGradingInProgress"
                     @update:model-value="handleCodeChange"
+                    @submit-for-grading="handleSubmitForGrading"
                   />
                   <div v-else class="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
                     <div class="text-center">
@@ -364,6 +367,22 @@
         />
       </div>
     </div>
+    
+    <!-- Grading Results Modal -->
+    <div
+      v-if="showGradingResults && gradingResults"
+      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      @click.self="showGradingResults = false"
+    >
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <GradingResults
+          :results="gradingResults"
+          @close="showGradingResults = false"
+          @save-to-history="handleSaveGradingToHistory"
+          @view-history="handleViewGradingHistory"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -378,6 +397,7 @@ import CodeEditor from '@/components/challenge/CodeEditor.vue'
 import AIChatInterface from '@/components/ai/AIChatInterface.vue'
 import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import ProgressTracker from '@/components/progress/ProgressTracker.vue'
+import GradingResults from '@/components/challenge/GradingResults.vue'
 import type { Challenge, ChallengeContext } from '@/types'
 import { ProgrammingLanguage } from '@/types'
 
@@ -406,6 +426,9 @@ const { currentLevel, nextLevelProgress, totalAchievements } = storeToRefs(progr
 // Local state
 const currentCode = ref('')
 const userId = ref('demo-user')
+const isGradingInProgress = ref(false)
+const gradingResults = ref(null)
+const showGradingResults = ref(false)
 
 // Navigation configuration
 const navigationViews = [
@@ -487,6 +510,58 @@ const switchToCloudMode = () => {
 
 const switchToLocalMode = () => {
   appStore.setDeploymentMode('local')
+}
+
+const handleSubmitForGrading = async () => {
+  if (!currentChallenge.value || !currentCode.value.trim()) {
+    appStore.setError('Please write some code before submitting for grading')
+    return
+  }
+
+  isGradingInProgress.value = true
+  appStore.setLoading(true, 'Submitting code for AI grading...')
+
+  try {
+    // Import the AI grading service
+    const { getAIGradingService } = await import('@/services/aiGradingService')
+    const gradingService = getAIGradingService()
+
+    // Submit code for grading
+    const result = await gradingService.submitForGrading(
+      currentChallenge.value.id,
+      currentCode.value,
+      currentChallenge.value,
+      userId.value
+    )
+
+    if (result.success) {
+      // Store grading results and show modal
+      gradingResults.value = result
+      showGradingResults.value = true
+      console.log('Grading completed:', result)
+    } else {
+      appStore.setError(result.error || 'Failed to grade code')
+    }
+  } catch (error) {
+    console.error('Grading failed:', error)
+    appStore.setError('Failed to submit code for grading. Please try again.')
+  } finally {
+    isGradingInProgress.value = false
+    appStore.setLoading(false)
+  }
+}
+
+const handleSaveGradingToHistory = () => {
+  // The grading service already saves to history automatically
+  // This is just for user feedback
+  showGradingResults.value = false
+  appStore.setError('Grading results saved to your progress history!')
+}
+
+const handleViewGradingHistory = () => {
+  // Navigate to progress view to see grading history
+  showGradingResults.value = false
+  navigateToView('progress')
 }
 
 const handleResize = () => {
