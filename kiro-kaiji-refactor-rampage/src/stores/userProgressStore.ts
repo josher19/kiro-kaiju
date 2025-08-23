@@ -14,6 +14,7 @@ import type {
   EvaluationResult,
   UserPreferences 
 } from '@/types/user';
+import type { GradingHistoryEntry } from '@/types/api';
 import { KaijuType } from '@/types/kaiju';
 import { DifficultyLevel, ChallengeCategory } from '@/types/challenge';
 
@@ -275,6 +276,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
       unlockedDifficulties: [DifficultyLevel.BEGINNER],
       unlockedKaiju: [KaijuType.HYDRA_BUG], // Start with basic Kaiju
       preferences: { ...defaultPreferences },
+      gradingHistory: [],
       createdAt: now,
       updatedAt: now
     };
@@ -404,6 +406,19 @@ export const useUserProgressStore = defineStore('userProgress', () => {
     await saveProgress();
   };
 
+  const addGradingHistoryEntry = async (entry: GradingHistoryEntry) => {
+    if (!userProgress.value) return;
+    
+    userProgress.value.gradingHistory.push(entry);
+    
+    // Keep only last 50 grading entries to prevent excessive storage
+    if (userProgress.value.gradingHistory.length > 50) {
+      userProgress.value.gradingHistory = userProgress.value.gradingHistory.slice(-50);
+    }
+    
+    await saveProgress();
+  };
+
   const resetProgress = async () => {
     if (!userProgress.value) return;
     
@@ -419,6 +434,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
       unlockedDifficulties: [DifficultyLevel.BEGINNER],
       unlockedKaiju: [KaijuType.HYDRA_BUG],
       preferences: { ...defaultPreferences },
+      gradingHistory: [],
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -448,6 +464,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
     updateKaijuDefeated,
     updateCategoryCompleted,
     updatePreferences,
+    addGradingHistoryEntry,
     resetProgress
   };
 });

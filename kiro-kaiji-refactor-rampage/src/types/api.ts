@@ -96,6 +96,51 @@ export interface ProgressResponse {
   error?: string;
 }
 
+// AI Grading API
+export enum GradingRole {
+  DEVELOPER = 'developer',
+  ARCHITECT = 'architect',
+  SQA = 'sqa',
+  PRODUCT_OWNER = 'product-owner'
+}
+
+export interface RoleEvaluation {
+  role: GradingRole;
+  modelUsed: string;
+  score: number;
+  feedback: string;
+  detailedAnalysis: string;
+  focusAreas: string[];
+  timestamp: Date;
+}
+
+export interface AIGradingRequest {
+  challengeId: string;
+  submittedCode: string;
+  requirements: string[];
+  userId?: string;
+}
+
+export interface AIGradingResponse {
+  success: boolean;
+  challengeId: string;
+  roleEvaluations: RoleEvaluation[];
+  averageScore: number;
+  overallFeedback: string;
+  gradingTimestamp: Date;
+  error?: string;
+}
+
+export interface GradingHistoryEntry {
+  challengeId: string;
+  gradingTimestamp: Date;
+  roleScores: Record<GradingRole, number>;
+  averageScore: number;
+  modelsUsed: string[];
+  challengeType: string;
+  kaijuType: string;
+}
+
 // Generic API Response
 export interface ApiResponse<T = any> {
   success: boolean;

@@ -6,6 +6,7 @@
 
 import type { KaijuType } from './kaiju';
 import type { DifficultyLevel, ChallengeCategory } from './challenge';
+import type { GradingHistoryEntry } from './api';
 
 export interface Achievement {
   id: string;
@@ -39,6 +40,7 @@ export interface UserProgress {
   unlockedDifficulties: DifficultyLevel[];
   unlockedKaiju: KaijuType[];
   preferences: UserPreferences;
+  gradingHistory: GradingHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

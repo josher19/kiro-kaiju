@@ -9,6 +9,28 @@
         <div class="w-2 h-2 rounded-full bg-green-500" :class="{ 'bg-red-500': hasErrors }"></div>
       </div>
       
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2">
+        <button
+          v-if="showGradingButton"
+          @click="$emit('submit-for-grading')"
+          :disabled="isGradingInProgress"
+          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+          :class="isGradingInProgress 
+            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+            : 'bg-blue-600 hover:bg-blue-700 text-white'"
+        >
+          <span v-if="isGradingInProgress" class="flex items-center space-x-1">
+            <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Grading...</span>
+          </span>
+          <span v-else>Submit for AI Grading</span>
+        </button>
+      </div>
+      
       <!-- Mobile Controls -->
       <div class="flex items-center space-x-2">
         <button
@@ -87,12 +109,16 @@ interface Props {
   readOnly?: boolean
   theme?: 'light' | 'dark'
   options?: Monaco.editor.IStandaloneEditorConstructionOptions
+  showGradingButton?: boolean
+  isGradingInProgress?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readOnly: false,
   theme: 'light',
-  options: () => ({})
+  options: () => ({}),
+  showGradingButton: false,
+  isGradingInProgress: false
 })
 
 // Emits
@@ -102,6 +128,7 @@ const emit = defineEmits<{
   'focus': []
   'blur': []
   'error': [errors: Monaco.editor.IMarker[]]
+  'submit-for-grading': []
 }>()
 
 // Refs
