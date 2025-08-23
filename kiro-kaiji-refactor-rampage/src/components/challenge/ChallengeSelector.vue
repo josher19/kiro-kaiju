@@ -71,14 +71,13 @@
       <!-- Programming Language Selection -->
       <div class="form-group">
         <label for="language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Programming Language *
+          Programming Language (defaults to JavaScript)
         </label>
         <select
           id="language"
           v-model="selectedLanguage"
           @change="handleLanguageChange"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          required
         >
           <option value="">Select a language...</option>
           <option 
@@ -119,13 +118,12 @@
       <!-- Challenge Category Selection -->
       <div class="form-group">
         <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Challenge Category *
+          Challenge Category (defaults to Refactoring)
         </label>
         <select
           id="category"
           v-model="selectedCategory"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          required
         >
           <option value="">Select a category...</option>
           <option 
@@ -141,13 +139,12 @@
       <!-- Difficulty Level Selection -->
       <div class="form-group">
         <label for="difficulty" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Difficulty Level *
+          Difficulty Level (defaults to Beginner)
         </label>
         <select
           id="difficulty"
           v-model="selectedDifficulty"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          required
         >
           <option value="">Select difficulty...</option>
           <option 
@@ -229,12 +226,14 @@ const selectedDifficulty = ref<DifficultyLevel | ''>('');
 const { 
   availableFrameworks, 
   isConfigValid, 
-  canGenerate, 
   isGenerating, 
   generationError,
   activeChallenges,
   currentChallenge
 } = storeToRefs(challengeStore);
+
+// Enhanced canGenerate logic - always allow generation with smart defaults
+const canGenerate = computed(() => !isGenerating.value);
 
 // Available options for dropdowns
 const availableLanguages = computed(() => [
@@ -327,10 +326,70 @@ const handleLanguageChange = () => {
 };
 
 const handleGenerateChallenge = async () => {
+  // Apply smart defaults for unselected fields
+  applySmartDefaults();
+  
   const newChallenge = await challengeStore.generateChallenge();
   if (newChallenge) {
+    // After challenge completion, apply progression logic for next challenge
+    applyProgressionLogic();
+    
     // Emit event for smooth transition to coding view
     emit('challenge-generated', newChallenge);
+  }
+};
+
+// Apply smart defaults for immediate challenge generation
+const applySmartDefaults = () => {
+  // Default language: JavaScript (first in list)
+  if (!selectedLanguage.value) {
+    selectedLanguage.value = ProgrammingLanguage.JAVASCRIPT;
+    challengeStore.updateLanguage(ProgrammingLanguage.JAVASCRIPT);
+  }
+  
+  // Default framework: No framework (empty)
+  if (!selectedFramework.value) {
+    selectedFramework.value = '';
+    challengeStore.updateFramework(undefined);
+  }
+  
+  // Default category: Refactoring (first in list)
+  if (!selectedCategory.value) {
+    selectedCategory.value = ChallengeCategory.REFACTORING;
+    challengeStore.updateCategory(ChallengeCategory.REFACTORING);
+  }
+  
+  // Default difficulty: Beginner (Level 1)
+  if (!selectedDifficulty.value) {
+    selectedDifficulty.value = DifficultyLevel.BEGINNER;
+    challengeStore.updateDifficulty(DifficultyLevel.BEGINNER);
+  }
+};
+
+// Apply progression logic for subsequent challenges
+const applyProgressionLogic = () => {
+  // For subsequent challenges, randomize language and category if not explicitly selected
+  const isFirstChallenge = activeChallenges.value.length === 0;
+  
+  if (!isFirstChallenge) {
+    // Randomize programming language
+    const randomLanguage = availableLanguages.value[Math.floor(Math.random() * availableLanguages.value.length)];
+    selectedLanguage.value = randomLanguage.value;
+    challengeStore.updateLanguage(randomLanguage.value);
+    
+    // Randomize challenge category
+    const randomCategory = availableCategories.value[Math.floor(Math.random() * availableCategories.value.length)];
+    selectedCategory.value = randomCategory.value;
+    challengeStore.updateCategory(randomCategory.value);
+    
+    // Keep framework as "No framework" for simplicity
+    selectedFramework.value = '';
+    challengeStore.updateFramework(undefined);
+    
+    // Difficulty based on user level (for now, keep as Beginner - Level 1)
+    // TODO: In the future, this should be based on user's actual progress level
+    selectedDifficulty.value = DifficultyLevel.BEGINNER;
+    challengeStore.updateDifficulty(DifficultyLevel.BEGINNER);
   }
 };
 
