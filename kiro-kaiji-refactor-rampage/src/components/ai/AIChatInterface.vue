@@ -196,7 +196,7 @@ const quickActions = ref([
 
 // Computed properties
 const canSendMessage = computed(() => {
-  return currentMessage.value.trim().length > 0 && !isLoading.value && isConnected.value;
+  return !isLoading.value && isConnected.value;
 });
 
 // Methods

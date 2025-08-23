@@ -457,7 +457,7 @@ describe('ZoomAFriendPanel', () => {
       
       // Should have sent a message with AI-generated content
       expect(wrapper.emitted('message-sent')).toBeTruthy()
-      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0]
+      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0] as any
       expect(sentMessage).toHaveProperty('message')
       expect(sentMessage.message).toContain('AI-generated')
     })
@@ -503,7 +503,7 @@ describe('ZoomAFriendPanel', () => {
       expect(wrapper.emitted('message-sent')).toBeTruthy()
       expect(wrapper.emitted('code-comments-generated')).toBeTruthy()
       
-      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0]
+      const sentMessage = wrapper.emitted('message-sent')?.[0]?.[0] as any
       expect(sentMessage.message).toContain('code comments')
     })
 

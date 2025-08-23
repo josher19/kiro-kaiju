@@ -33,7 +33,7 @@
             {{ member.name }}
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
-            {{ member.title.split(' ').slice(-1)[0] }}
+            {{ getJobTitle(member.role) }}
           </div>
         </button>
       </div>
@@ -179,6 +179,16 @@ const getAnimalEmoji = (avatar: AnimalAvatar): string => {
     [AnimalAvatar.CAT]: '🐱'
   }
   return emojiMap[avatar]
+}
+
+const getJobTitle = (role: TeamRole): string => {
+  const jobTitleMap = {
+    [TeamRole.QA]: 'SQA',
+    [TeamRole.ARCHITECT]: 'Architect',
+    [TeamRole.PRODUCT_OWNER]: 'PO',
+    [TeamRole.SENIOR_DEVELOPER]: 'Dev'
+  }
+  return jobTitleMap[role]
 }
 
 const formatTime = (date: Date): string => {
