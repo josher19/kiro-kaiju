@@ -57,6 +57,7 @@ const createMockUserProgress = (overrides: Partial<UserProgress> = {}): UserProg
       minimap: true
     }
   },
+  gradingHistory: [],
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides

@@ -222,13 +222,13 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
   ): Promise<AIGradingResponse> {
     return handleAsyncError(async () => {
       const requirements = challenge.requirements.map(req => req.description);
-      
+
       // Step 1: Query available models
       const availableModels = await this.getAvailableModels();
-      
+
       // Step 2: Determine model assignment strategy
       const modelStrategy = this.selectModelsForRoles(availableModels);
-      
+
       // Step 3: Perform sequential role evaluations
       const roleEvaluations: RoleEvaluation[] = [];
       const evaluationOrder = [
@@ -237,7 +237,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
         GradingRole.SQA,
         GradingRole.PRODUCT_OWNER
       ];
-      
+
       for (const role of evaluationOrder) {
         try {
           const evaluation = await this.evaluateWithRole(
@@ -248,14 +248,14 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
             challenge
           );
           roleEvaluations.push(evaluation);
-          
+
           // Apply delay between role evaluations to avoid rate limits
           if (role !== GradingRole.PRODUCT_OWNER) { // Don't delay after last evaluation
             await this.delay(this.requestDelay);
           }
         } catch (error) {
           console.error(`Failed to evaluate with ${role} role:`, error);
-          
+
           // Create fallback evaluation for failed role
           const fallbackEvaluation: RoleEvaluation = {
             role,
@@ -269,18 +269,18 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
           roleEvaluations.push(fallbackEvaluation);
         }
       }
-      
+
       // Step 4: Calculate average score
       const averageScore = this.calculateAverageScore(roleEvaluations);
-      
+
       // Step 5: Generate overall feedback
       const overallFeedback = this.generateOverallFeedback(roleEvaluations, averageScore);
-      
+
       // Step 6: Record grading history
       if (userId) {
         await this.recordGradingHistory(userId, challengeId, roleEvaluations, challenge);
       }
-      
+
       const response: AIGradingResponse = {
         success: true,
         challengeId,
@@ -289,9 +289,9 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
         overallFeedback,
         gradingTimestamp: new Date()
       };
-      
+
       return response;
-      
+
     }, {
       context: 'ai_grading_service_submit',
       challengeId,
@@ -305,12 +305,12 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
   private async getAvailableModels(): Promise<string[]> {
     try {
       const aiService = getAIService();
-      
+
       // Try to get models from the AI service configuration
       if (aiService['config']?.provider === 'local-llm') {
         const endpoint = aiService['config'].localLLM?.endpoint || 'http://localhost:1234/v1';
         const response = await fetch(`${endpoint}/models`);
-        
+
         if (response.ok) {
           const data = await response.json();
           return data.data?.map((model: any) => model.id) || ['local-model'];
@@ -325,7 +325,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
           'google/gemma-2-9b-it:free'
         ];
       }
-      
+
       // Fallback for Kiro AI or unknown providers
       return ['kiro-ai'];
     } catch (error) {
@@ -339,7 +339,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
    */
   private selectModelsForRoles(availableModels: string[]): ModelSelectionStrategy {
     const modelAssignments: Record<GradingRole, string> = {} as Record<GradingRole, string>;
-    
+
     if (availableModels.length === 1) {
       // Single model scenario - use same model for all roles
       const model = availableModels[0];
@@ -350,13 +350,13 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
     } else {
       // Multiple models scenario - assign different models to each role
       const roles = [GradingRole.DEVELOPER, GradingRole.ARCHITECT, GradingRole.SQA, GradingRole.PRODUCT_OWNER];
-      
+
       roles.forEach((role, index) => {
         const modelIndex = index % availableModels.length;
         modelAssignments[role] = availableModels[modelIndex];
       });
     }
-    
+
     return {
       availableModels,
       modelAssignments,
@@ -375,7 +375,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
     challenge: Challenge
   ): Promise<RoleEvaluation> {
     const promptConfig = this.gradingPrompts[role];
-    
+
     const evaluationPrompt = this.buildRoleEvaluationPrompt(
       code,
       role,
@@ -383,9 +383,9 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
       challenge,
       promptConfig
     );
-    
+
     const aiService = getAIService();
-    
+
     // Create a mock challenge context for the AI service
     const challengeContext = {
       challenge,
@@ -394,23 +394,23 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
       startTime: new Date(),
       lastModified: new Date()
     };
-    
+
     try {
       const response = await aiService.sendMessage(
         evaluationPrompt,
         challengeContext
       );
-      
+
       if (!response.success || !response.message) {
         throw new Error('AI service returned unsuccessful response');
       }
-      
+
       // Parse the AI response to extract score and feedback
       const { score, feedback, detailedAnalysis } = this.parseAIEvaluationResponse(
         response.message.content,
         role
       );
-      
+
       return {
         role,
         modelUsed: model,
@@ -488,17 +488,17 @@ DETAILED ANALYSIS:
       // Extract score using regex (handle negative numbers)
       const scoreMatch = aiResponse.match(/SCORE:\s*(-?\d+)/i);
       const score = scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[1]))) : 50;
-      
+
       // Extract feedback section
       const feedbackMatch = aiResponse.match(/FEEDBACK:\s*(.*?)(?=DETAILED ANALYSIS:|$)/is);
-      const feedback = feedbackMatch ? feedbackMatch[1].trim() : 
+      const feedback = feedbackMatch ? feedbackMatch[1].trim() :
         `${role} evaluation completed. Please review the detailed analysis for specific insights.`;
-      
+
       // Extract detailed analysis section
       const analysisMatch = aiResponse.match(/DETAILED ANALYSIS:\s*(.*?)$/is);
-      const detailedAnalysis = analysisMatch ? analysisMatch[1].trim() : 
+      const detailedAnalysis = analysisMatch ? analysisMatch[1].trim() :
         `Detailed analysis from ${role} perspective: ${aiResponse.substring(0, 500)}...`;
-      
+
       return {
         score,
         feedback,
@@ -506,7 +506,7 @@ DETAILED ANALYSIS:
       };
     } catch (error) {
       console.error('Failed to parse AI evaluation response:', error);
-      
+
       // Fallback parsing
       return {
         score: 50,
@@ -521,7 +521,7 @@ DETAILED ANALYSIS:
    */
   private calculateAverageScore(roleEvaluations: RoleEvaluation[]): number {
     if (roleEvaluations.length === 0) return 0;
-    
+
     const totalScore = roleEvaluations.reduce((sum, evaluation) => sum + evaluation.score, 0);
     return Math.round(totalScore / roleEvaluations.length);
   }
@@ -540,7 +540,7 @@ DETAILED ANALYSIS:
       needsImprovement: averageScore >= 40,
       poor: averageScore < 40
     };
-    
+
     let overallAssessment = '';
     if (scoreRanges.excellent) {
       overallAssessment = '🌟 Excellent work! Your code demonstrates strong technical skills across all evaluation areas.';
@@ -553,18 +553,18 @@ DETAILED ANALYSIS:
     } else {
       overallAssessment = '🔧 Significant improvements needed. Review the detailed feedback carefully and consider refactoring.';
     }
-    
+
     const roleScores = roleEvaluations.map(evaluation => `${evaluation.role}: ${evaluation.score}`).join(', ');
-    
+
     return `${overallAssessment}
 
 **Overall Score: ${averageScore}/100**
 **Individual Role Scores:** ${roleScores}
 
 **Key Insights:**
-${roleEvaluations.map(evaluation => 
-  `• **${evaluation.role.toUpperCase()}**: ${evaluation.feedback.split('.')[0]}.`
-).join('\n')}
+${roleEvaluations.map(evaluation =>
+      `• **${evaluation.role.toUpperCase()}**: ${evaluation.feedback.split('.')[0]}.`
+    ).join('\n')}
 
 Review the detailed analysis from each role to understand specific areas for improvement and build upon your strengths.`;
   }
@@ -580,24 +580,24 @@ Review the detailed analysis from each role to understand specific areas for imp
   ): Promise<void> {
     try {
       const userProgressStore = useUserProgressStore();
-      
+
       if (!userProgressStore.userProgress) {
         console.warn('User progress not initialized, cannot record grading history');
         return;
       }
-      
+
       const roleScores: Record<GradingRole, number> = {} as Record<GradingRole, number>;
       const modelsUsed: string[] = [];
-      
+
       roleEvaluations.forEach(evaluation => {
         roleScores[evaluation.role] = evaluation.score;
         if (!modelsUsed.includes(evaluation.modelUsed)) {
           modelsUsed.push(evaluation.modelUsed);
         }
       });
-      
+
       const averageScore = this.calculateAverageScore(roleEvaluations);
-      
+
       const gradingEntry: GradingHistoryEntry = {
         challengeId,
         gradingTimestamp: new Date(),
@@ -607,15 +607,15 @@ Review the detailed analysis from each role to understand specific areas for imp
         challengeType: challenge.config.category,
         kaijuType: challenge.kaiju.name
       };
-      
+
       userProgressStore.userProgress.gradingHistory.push(gradingEntry);
-      
+
       // Keep only last 50 grading entries to prevent excessive storage
       if (userProgressStore.userProgress.gradingHistory.length > 50) {
-        userProgressStore.userProgress.gradingHistory = 
+        userProgressStore.userProgress.gradingHistory =
           userProgressStore.userProgress.gradingHistory.slice(-50);
       }
-      
+
       await userProgressStore.saveProgress();
     } catch (error) {
       console.error('Failed to record grading history:', error);
@@ -642,7 +642,7 @@ Review the detailed analysis from each role to understand specific areas for imp
    */
   getGradingStatistics(userId: string) {
     const history = this.getGradingHistory(userId);
-    
+
     if (history.length === 0) {
       return {
         totalGradings: 0,
@@ -653,17 +653,17 @@ Review the detailed analysis from each role to understand specific areas for imp
         recentGradings: []
       };
     }
-    
+
     const totalGradings = history.length;
     const averageOverallScore = Math.round(
       history.reduce((sum, entry) => sum + entry.averageScore, 0) / totalGradings
     );
-    
+
     // Calculate average scores per role
     const averageRoleScores: Record<GradingRole, number> = {} as Record<GradingRole, number>;
     const roleScoreSums: Record<GradingRole, number> = {} as Record<GradingRole, number>;
     const roleCounts: Record<GradingRole, number> = {} as Record<GradingRole, number>;
-    
+
     history.forEach(entry => {
       if (entry.roleScores) {
         Object.entries(entry.roleScores).forEach(([role, score]) => {
@@ -673,32 +673,32 @@ Review the detailed analysis from each role to understand specific areas for imp
         });
       }
     });
-    
+
     Object.keys(roleScoreSums).forEach(role => {
       const gradingRole = role as GradingRole;
       averageRoleScores[gradingRole] = Math.round(
         roleScoreSums[gradingRole] / roleCounts[gradingRole]
       );
     });
-    
+
     // Determine improvement trend
     let improvementTrend: 'improving' | 'declining' | 'stable' = 'stable';
     if (history.length >= 3) {
       const recent = history.slice(-3).map(h => h.averageScore);
       const older = history.slice(-6, -3).map(h => h.averageScore);
-      
+
       if (older.length > 0) {
         const recentAvg = recent.reduce((sum, score) => sum + score, 0) / recent.length;
         const olderAvg = older.reduce((sum, score) => sum + score, 0) / older.length;
-        
+
         if (recentAvg > olderAvg + 5) improvementTrend = 'improving';
         else if (recentAvg < olderAvg - 5) improvementTrend = 'declining';
       }
     }
-    
+
     const bestScore = Math.max(...history.map(h => h.averageScore));
     const recentGradings = history.slice(-5).reverse();
-    
+
     return {
       totalGradings,
       averageOverallScore,

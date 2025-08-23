@@ -55,9 +55,11 @@ describe('AIGradingService', () => {
       type: KaijuType.HYDRA_BUG,
       description: 'A monster that creates bugs when you fix bugs',
       avatar: '/images/kaiju/hydra-bug.png',
-      difficulty: 2,
       codePatterns: [],
-      hints: []
+      difficultyModifiers: [],
+      specialAbilities: [],
+      weaknesses: [],
+      flavorText: 'A hydra-like bug that spawns more bugs when you try to fix it'
     };
 
     mockChallenge = {
