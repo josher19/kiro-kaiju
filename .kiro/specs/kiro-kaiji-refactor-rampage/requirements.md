@@ -93,6 +93,22 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 
 ### Requirement 8
 
+**User Story:** As a user completing challenges, I want to submit my code for comprehensive AI-based grading from multiple role perspectives, so that I can receive detailed feedback and track my progress with recorded scores.
+
+#### Acceptance Criteria
+
+1. WHEN a user clicks "Submit Code for Grading" THEN the system SHALL evaluate the code using AI from four different role perspectives in sequence: Developer, Architect, SQA, and Product Owner
+2. WHEN the system queries /v1/models endpoint and receives one model THEN it SHALL use that single model for all four role evaluations
+3. WHEN the system queries /v1/models endpoint and receives multiple models THEN it SHALL use different models for each role (Developer uses 1st model, Architect uses 2nd model, SQA uses 3rd model, Product Owner uses 4th model, cycling if needed)
+4. WHEN evaluating as Developer role THEN the system SHALL provide detailed prompts focusing on code quality, best practices, maintainability, and technical implementation
+5. WHEN evaluating as Architect role THEN the system SHALL provide detailed prompts focusing on system design, scalability, patterns, and architectural decisions
+6. WHEN evaluating as SQA role THEN the system SHALL provide detailed prompts focusing on defects, edge cases, testing coverage, and quality assurance concerns
+7. WHEN evaluating as Product Owner role THEN the system SHALL provide detailed prompts focusing on requirement fulfillment, user experience, and business value delivery
+8. WHEN all role evaluations are complete THEN the system SHALL display individual scores from each role and calculate an average overall score
+9. WHEN grading is complete THEN the system SHALL record the individual role scores and average score in the user's Progress page for tracking improvement over time
+
+### Requirement 9
+
 **User Story:** As a developer using the application, I want flexible AI provider options including local and remote LLM support, so that I can choose the most appropriate AI solution for my environment and needs.
 
 #### Acceptance Criteria

@@ -110,7 +110,8 @@ export class AIService {
 
           switch (provider) {
             case 'kiro':
-              response = await this.sendToKiroAI(request, challengeContext);
+              // response = await this.sendToKiroAI(request, challengeContext);
+              response = await this.sendToLocalLLM(request, challengeContext);
               break;
             case 'local-llm':
               response = await this.sendToLocalLLM(request, challengeContext);
@@ -321,7 +322,7 @@ What specific aspect would you like help with?`;
   ): Promise<AIChatMessage> {
     const localConfig = this.config.localLLM || {
       endpoint: 'http://localhost:1234/v1',
-      timeout: 30000,
+      timeout: 30000 * 10, // TODO: 5 minutes 
       maxRetries: 3
     };
 
@@ -349,13 +350,13 @@ What specific aspect would you like help with?`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dummy-key' // Some local LLMs require this
+          // 'Authorization': 'Bearer dummy-key' // Some local LLMs require this
         },
         body: JSON.stringify({
           model: localConfig.model || 'local-model',
           messages,
           temperature: 0.7,
-          max_tokens: 1000,
+          max_tokens: 100,
           stream: false
         }),
         signal: controller.signal

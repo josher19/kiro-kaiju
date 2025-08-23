@@ -192,7 +192,7 @@ const getKaijuEmoji = (kaiju: KaijuType): string => {
     [KaijuType.COMPLEXASAUR]: '🦕',
     [KaijuType.DUPLICATRON]: '👥',
     [KaijuType.SPAGHETTIZILLA]: '🍝',
-    [KaijuType.MEMORYLEAK_ODACTYL]: '🦅'
+    [KaijuType.MEMORYLEAK_ODACTYL]: '🦇'
   };
   return emojiMap[kaiju] || '👾';
 };

@@ -608,6 +608,9 @@ Review the detailed analysis from each role to understand specific areas for imp
         kaijuType: challenge.kaiju.name
       };
 
+      if (!userProgressStore.userProgress.gradingHistory) {
+        userProgressStore.userProgress.gradingHistory = [];
+      }
       userProgressStore.userProgress.gradingHistory.push(gradingEntry);
 
       // Keep only last 50 grading entries to prevent excessive storage

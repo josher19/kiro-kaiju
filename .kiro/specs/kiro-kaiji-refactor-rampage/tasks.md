@@ -24,7 +24,7 @@
   - Write unit tests for each Kaiju monster type
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 4. Create Challenge Selector Component
+- [x] 4. Create (or Update) Challenge Selector Component
   - Build Vue component with dropdowns for language, framework, category, difficulty
   - Implement dynamic framework filtering based on selected language
   - Add form validation and "Generate Challenge" button state management
@@ -61,7 +61,7 @@
   - Write tests for chat functionality and API integration
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 8. Create Zoom-a-Friend Panel Component
+- [x] 8. Create (or Update) Zoom-a-Friend Panel Component
   - Build team member selection interface with animal icons and role titles
   - Implement Quality Assurance (Pufferfish) dialog with bug-focused AI responses
   - Implement Architect (Owl) dialog with architectural AI advice including "Architecture" and "Redundancy"
@@ -82,7 +82,23 @@
   - Write comprehensive tests for evaluation accuracy
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [x] 10. Implement User Progress Tracking
+- [x] 10. Implement AI-Based Multi-Role Grading System
+  - Create AI grading service with model detection and selection logic
+  - Implement /v1/models endpoint querying to determine available models
+  - Build model assignment strategy for single vs multiple model scenarios
+  - Create detailed grading prompts for Developer role focusing on code quality, best practices, maintainability, and technical implementation
+  - Create detailed grading prompts for Architect role focusing on system design, scalability, patterns, and architectural decisions
+  - Create detailed grading prompts for SQA role focusing on defects, edge cases, testing coverage, and quality assurance concerns
+  - Create detailed grading prompts for Product Owner role focusing on requirement fulfillment, user experience, and business value delivery
+  - Implement sequential role evaluation system (Developer → Architect → SQA → Product Owner)
+  - Build score calculation and averaging system for individual role scores
+  - Create grading results display component showing individual and average scores
+  - Integrate grading history tracking into user progress system
+  - Add "Submit Code for Grading" button and workflow to challenge interface
+  - Write comprehensive tests for AI grading service and role-based evaluation
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
+
+- [x] 11. Implement User Progress Tracking
   - Create UserProgress Pinia store for state management
   - Build progress profile creation and statistics tracking
   - Implement achievement system with badge unlocking
@@ -92,7 +108,7 @@
   - Write tests for progress tracking and achievement logic
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [x] 11. Create Main Application Layout
+- [x] 12. Create Main Application Layout
   - Build responsive main layout component with mobile-first design
   - Implement navigation between challenge selection, coding, and progress views
   - Add collapsible panels for AI chat and Zoom-a-Friend on mobile
@@ -101,7 +117,7 @@
   - Write tests for responsive layout and mobile interactions
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 12. Integrate Local Mode with Kiro IDE
+- [x] 13. Integrate Local Mode with Kiro IDE
   - Create file system integration for local code modification
   - Implement direct Kiro AI integration for local mode
   - Build local challenge submission and evaluation workflow
@@ -109,7 +125,7 @@
   - Write integration tests for Kiro IDE functionality
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [x] 13. Implement Local LLM Integration
+- [x] 14. Implement Local LLM Integration
   - Configure OpenAI-compatible endpoint support for local LLM providers
   - Set default local endpoint to http://localhost:1234/v1 for LLM Studio compatibility
   - Implement connection detection and fallback logic for local LLM services
@@ -118,7 +134,7 @@
   - Write unit tests for local LLM integration and error handling
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [x] 14. Implement Remote LLM Integration with OpenRouter
+- [x] 15. Implement Remote LLM Integration with OpenRouter
   - Configure OpenRouter API integration with preferred model selection
   - Implement model preference hierarchy (openai/gpt-oss-20b, Claude, coding-focused models)
   - Add automatic model fallback when preferred models are unavailable
@@ -127,7 +143,7 @@
   - Write integration tests for OpenRouter API and model switching
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [x] 15. Fix Build Process and Ensure Test Suite Passes
+- [x] 16. Fix Build Process and Ensure Test Suite Passes
   - DONE: Resolve all TypeScript compilation errors and type issues
   - DONE: Fix Vite build configuration and dependency conflicts
   - DONE: Address Monaco Editor bundle size and import issues
@@ -144,7 +160,7 @@
   - Commit changes (one line description) after all this task is complete via git commit
   - _Requirements: All requirements depend on a stable build process_
 
-- [ ] 16. Implement AWS Cloud Mode Services
+- [ ] 17. Implement AWS Cloud Mode Services
   - Set up AWS Lambda functions for challenge generation and evaluation
   - Configure DynamoDB for user progress and challenge storage
   - Integrate multi-provider AI support (Local LLM, Remote LLM, Kiro AI)
@@ -153,7 +169,7 @@
   - Write integration tests for AWS services and AI provider switching
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
 
-- [x] 16. Add Error Handling and Offline Support
+- [x] 18. Add Error Handling and Offline Support
   - Implement comprehensive error handling with user-friendly messages
   - Create offline mode with cached challenges and local storage
   - Add network connectivity detection and graceful degradation
@@ -162,7 +178,7 @@
   - Write tests for error scenarios and offline functionality
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 17. Optimize Performance and Accessibility
+- [ ] 19. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -171,7 +187,7 @@
   - Write performance tests and accessibility audits
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 18. Create End-to-End Testing Suite
+- [x] 20. Create End-to-End Testing Suite
   - Write E2E tests for complete challenge workflow
   - Test mobile responsiveness across different devices
   - Verify AI integration and Zoom-a-Friend functionality

@@ -182,6 +182,47 @@ enum AnimalAvatar {
 }
 ```
 
+#### 6. AI Grading Service
+```typescript
+interface AIGradingService {
+  submitForGrading: (challengeId: string, code: string) => Promise<AIGradingResponse>;
+  getAvailableModels: () => Promise<string[]>;
+  selectModelsForRoles: (availableModels: string[]) => Record<GradingRole, string>;
+  evaluateWithRole: (code: string, role: GradingRole, model: string, requirements: string[]) => Promise<RoleEvaluation>;
+  calculateAverageScore: (roleEvaluations: RoleEvaluation[]) => number;
+  recordGradingHistory: (userId: string, gradingResult: AIGradingResponse) => Promise<void>;
+}
+
+interface GradingPrompts {
+  [GradingRole.DEVELOPER]: {
+    systemPrompt: string;
+    focusAreas: ['code quality', 'best practices', 'maintainability', 'technical implementation'];
+    evaluationCriteria: ['clean code principles', 'SOLID principles', 'error handling', 'performance'];
+  };
+  [GradingRole.ARCHITECT]: {
+    systemPrompt: string;
+    focusAreas: ['system design', 'scalability', 'patterns', 'architectural decisions'];
+    evaluationCriteria: ['design patterns', 'separation of concerns', 'modularity', 'extensibility'];
+  };
+  [GradingRole.SQA]: {
+    systemPrompt: string;
+    focusAreas: ['defects', 'edge cases', 'testing coverage', 'quality assurance'];
+    evaluationCriteria: ['bug detection', 'test completeness', 'edge case handling', 'validation'];
+  };
+  [GradingRole.PRODUCT_OWNER]: {
+    systemPrompt: string;
+    focusAreas: ['requirement fulfillment', 'user experience', 'business value'];
+    evaluationCriteria: ['requirement compliance', 'usability', 'feature completeness', 'user value'];
+  };
+}
+
+interface ModelSelectionStrategy {
+  singleModel: (model: string) => Record<GradingRole, string>;
+  multipleModels: (models: string[]) => Record<GradingRole, string>;
+  fallbackModel: string; // Default model if none available
+}
+```
+
 ### API Interfaces
 
 #### Challenge Generation API
@@ -225,6 +266,47 @@ interface EvaluationResponse {
 }
 ```
 
+#### AI Grading API
+```typescript
+interface AIGradingRequest {
+  challengeId: string;
+  submittedCode: string;
+  requirements: string[];
+  userId?: string;
+}
+
+interface RoleEvaluation {
+  role: GradingRole;
+  modelUsed: string;
+  score: number;
+  feedback: string;
+  detailedAnalysis: string;
+  timestamp: Date;
+}
+
+interface AIGradingResponse {
+  challengeId: string;
+  roleEvaluations: RoleEvaluation[];
+  averageScore: number;
+  overallFeedback: string;
+  gradingTimestamp: Date;
+}
+
+enum GradingRole {
+  DEVELOPER = 'developer',
+  ARCHITECT = 'architect',
+  SQA = 'sqa',
+  PRODUCT_OWNER = 'product-owner'
+}
+
+interface GradingPromptConfig {
+  role: GradingRole;
+  focusAreas: string[];
+  evaluationCriteria: string[];
+  promptTemplate: string;
+}
+```
+
 ## Data Models
 
 ### Challenge Model
@@ -261,8 +343,19 @@ interface UserProgress {
     improvementTrend: number[];
   };
   unlockedDifficulties: DifficultyLevel[];
+  gradingHistory: GradingHistoryEntry[]; // Track AI grading results over time
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface GradingHistoryEntry {
+  challengeId: string;
+  gradingTimestamp: Date;
+  roleScores: Record<GradingRole, number>;
+  averageScore: number;
+  modelUsed: string[];
+  challengeType: string;
+  kaijuType: KaijuType;
 }
 ```
 
