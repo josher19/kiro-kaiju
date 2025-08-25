@@ -1,12 +1,20 @@
 # AWS Kiro Prompt
 
+- [Designing Programs with Kiro](#designing-programs-with-kiro)
+- [Original Prompt to Kiro](#original-prompt-to-kiro)
+- [Kiro Response](#kiro-response)
+- [Refinement](#refinement)
+- [Conclusion](#conclusion)
+    - [Steering](#steering)
+    - [Kiro Feature Requests](#kiro-feature-requests)
+
 ## Designing Programs with Kiro
 
 *How did I start?*
 - I asked AI for ideas for award winning entries for the Code with Kiro Hackathon. It had several ideas.
-- The Refactoring example for the Education category seemed interesting but a bit boring,  but made me think about AI refactoring monstrously complex code.
-- On the spot, I came up with HydraBug and the Complexasaur Kaiju as Coding Katas.
-Thus was born a (hopefully) award winning, entertaining theme for the app.
+- The Refactoring example for the Education category seemed interesting but a bit boring,  but made me think about AI refactoring _monstrously complex code_.
+- On the spot, I came up with *HydraBug* and the *Complexasaur* Kaiju as Coding Katas.
+Thus was born a (hopefully) award winning, entertaining Hackathon entry.
 
 ## Original Prompt to Kiro
 
@@ -26,7 +34,7 @@ Thus was born a (hopefully) award winning, entertaining theme for the app.
 > 
 > Use standard Google Meet Filter Characters (avatars) such as: Pig, Owl, Alien, Pufferfish, Bunny, Robot, Dinosaur, Dog, or Cat. Choose which Avatar would be funniest with each Role, such as Pufferfish for Quality Assurance. Create fake dialog for each role which is mostly mumbling, barking, meowing, etc with a few key words such as "Defect" and "Bug" for Quality Assurance and "Architecture" and "Redundancy" for the Architect.
 
-## Kiro
+## Kiro Response
 
 **This sounds like an amazing and creative project!** Let me start by creating a spec for "Kiro Kaiji: Refactor Rampage" - this educational coding game concept has great potential.
 
@@ -97,15 +105,27 @@ You can now begin executing tasks by opening the tasks.md file and clicking "Sta
 **The spec is ready to help you build this award-winning hackathon project! 🎮👾**
 
 ---
+---
 
 ## Conclusion
 
-There were further refinements as you can see from the [git log](https://github.com/josher19/kiro-kaiju/commits).
+There were further refinements, as you can see from the [git log](https://github.com/josher19/kiro-kaiju/commits).
 
-Programming with Kiro was definitely a **force multiplier**. I'm a backend developer, but I could just specify what kind of UI I wanted and Kiro would create it. It did still needed guidance. For example, it didn't know it should go directly to the Code Editor area as soon as the user had requested a Challenge. But it took **programming to a higher level**, so I could think more about *system design, architecture, and usability* rather than details such as how the VUE components should be laid out on the screen. 
+Programming with Kiro was definitely a **force multiplier**. I'm a backend developer, but I could simply specify the UI I wanted and Kiro would create it.
 
-When programming this project with Kiro, I thought more about creativity and ease-of-use and less about technical details, and I'm usually a very detail oriented person.
+It still needed guidance -- for example, it didn't know it should go directly to the Code Editor area as soon as the user had requested a Challenge. But it took **programming to a higher level**, so I could think more about *system design, architecture, and usability* rather than details such as how the VUE components should be laid out on the screen. 
 
-I guided Kiro towards writing Git Commits by adding a kiro steering file called [git-commits.md](https://github.com/josher19/kiro-kaiju/blob/main/.kiro/steering/git-commits.md). In this case, adding more details in the steering file only made very long commit messages, so I reverted to the original version of the file.
+When working on this project, I thought more about creativity and ease-of-use and less about technical details, and I'm usually a very detail-oriented person.
 
-Next: [Run Locally](https://github.com/josher19/kiro-kaiju/blob/main/kiro-kaiji-refactor-rampage/README.md) or _Play Online_
+### Steering
+
+I guided Kiro towards writing **Git Commits** by adding a Kiro steering file called [git-commits.md](https://github.com/josher19/kiro-kaiju/blob/main/.kiro/steering/git-commits.md).
+- In this case, adding more detail to the steering file produced overly long commit messages, so I reverted to the original version of the file. 
+- The [tech.md](.kiro/steering/tech.md) steering file was also useful in making sure Kiro used Vue v3 rather than React.
+
+### Kiro Feature Requests:
+
+- [Export or Copy Chat as Markdown](https://github.com/kirodotdev/Kiro/issues/2362) (rather than just plain text)
+- [Tell Kiro about code Bugs / Defects](https://github.com/kirodotdev/Kiro/issues/2373) (rather than through Refinement or manually adding to Tasks)
+
+_Next Step_: [Run Locally](https://github.com/josher19/kiro-kaiju/blob/main/kiro-kaiji-refactor-rampage/README.md) or _Play Online_
