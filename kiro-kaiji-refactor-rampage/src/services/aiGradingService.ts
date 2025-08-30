@@ -539,7 +539,9 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
     requirements: string[],
     challenge: Challenge
   ): string {
-    return `You are an AI code evaluation system that provides comprehensive feedback from multiple professional perspectives. You will evaluate the provided code from four different role perspectives simultaneously and return a structured JSON response.
+    return `You are an AI code evaluation system that provides comprehensive feedback from multiple professional perspectives. 
+    You will return JSON with { role: [score, reason] }, such as: {"developer": [85, "Good code structure with minor improvements needed"], "architect": [78, "Solid design but could use better patterns"], "sqa": [92, "Excellent testing and quality measures"], "productOwner": [88, "Requirements well addressed with good UX"]}
+    You will evaluate the provided code from four different role perspectives simultaneously and return a structured JSON response.
 
 **Challenge Context:**
 - Challenge: ${challenge.title || 'Code Evaluation Challenge'}

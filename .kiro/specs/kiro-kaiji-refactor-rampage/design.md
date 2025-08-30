@@ -64,13 +64,68 @@ graph TB
 - **AI Integration**: Direct integration with Kiro's built-in AI capabilities
 - **Benefits**: No external dependencies, immediate feedback, full IDE integration
 
-#### AWS Cloud Mode with LLM Options
+#### AWS Cloud Mode with Flexible AI Provider Options
 - **Infrastructure**: AWS Lambda functions for serverless backend services
 - **Storage**: AWS DynamoDB for user progress and challenge data
 - **AI Provider Options**:
   - **Local LLM**: OpenAI-compatible endpoint (default: http://localhost:1234/v1) using LLM Studio or similar
   - **Remote LLM**: OpenRouter API with preferred models (openai/gpt-oss-20b, Claude, other coding-focused models)
 - **Benefits**: Scalable, multi-user support, persistent data storage, flexible AI provider options
+
+### AI Provider Selection Strategy
+
+#### Local LLM Configuration (Requirement 9.1, 9.5)
+```typescript
+interface LocalLLMConfig {
+  defaultEndpoint: 'http://localhost:1234/v1';
+  connectionTimeout: number;
+  retryAttempts: number;
+  fallbackBehavior: 'error-message' | 'switch-to-remote' | 'offline-mode';
+  healthCheck: {
+    endpoint: '/v1/models';
+    interval: number;
+    failureThreshold: number;
+  };
+}
+```
+
+#### Remote LLM Configuration (Requirement 9.2, 9.4, 9.6)
+```typescript
+interface RemoteLLMConfig {
+  provider: 'openrouter';
+  preferredModels: ['openai/gpt-oss-20b', 'claude-3-haiku', 'coding-focused-models'];
+  fallbackStrategy: {
+    automaticFallback: boolean;
+    fallbackOrder: string[];
+    costOptimization: 'free-tier-priority' | 'performance-priority';
+  };
+  rateLimiting: {
+    requestDelay: number; // Small delay to avoid quotas (Requirement 9.3)
+    quotaManagement: boolean;
+    costTracking: boolean;
+  };
+}
+```
+
+#### AI Provider Abstraction Layer
+The system implements a unified interface that abstracts the differences between AI providers:
+
+```typescript
+interface AIProviderInterface {
+  provider: 'kiro' | 'local' | 'remote';
+  isAvailable: () => Promise<boolean>;
+  sendRequest: (prompt: string, options: RequestOptions) => Promise<string>;
+  getAvailableModels: () => Promise<string[]>;
+  handleError: (error: AIProviderError) => AIProviderResponse;
+}
+
+interface AIProviderError {
+  type: 'connection-failed' | 'model-unavailable' | 'quota-exceeded' | 'invalid-response';
+  provider: string;
+  originalError: Error;
+  fallbackOptions: string[];
+}
+```
 
 ## Components and Interfaces
 
@@ -346,6 +401,80 @@ interface UnifiedGradingRequest {
 }
 ```
 
+## AI-Based Multi-Role Grading System
+
+### Design Rationale
+The AI-based grading system addresses Requirement 8 by providing comprehensive feedback from multiple professional perspectives. The design uses a single AI model approach to ensure consistency and reduce API costs while still providing diverse role-based evaluations.
+
+### Unified Grading Architecture
+```typescript
+interface UnifiedGradingSystem {
+  modelSelection: {
+    queryAvailableModels: () => Promise<string[]>; // Query /v1/models endpoint
+    selectOptimalModel: (available: string[]) => string; // Choose best available model
+    fallbackStrategy: string[]; // Ordered list of fallback models
+  };
+  
+  singleRequestEvaluation: {
+    unifiedPrompt: string; // Single prompt requesting all four role evaluations
+    expectedResponseFormat: 'json'; // {"developer": [score, "reason"], ...}
+    roleInstructions: Record<GradingRole, RoleInstruction>;
+  };
+  
+  responseProcessing: {
+    parseJSON: (response: string) => Record<GradingRole, [number, string]>;
+    calculateAverage: (roleScores: Record<GradingRole, [number, string]>) => number;
+    generateFeedback: (roleEvaluations: Record<GradingRole, RoleEvaluation>) => string;
+  };
+}
+
+interface RoleInstruction {
+  systemPrompt: string;
+  focusAreas: string[];
+  evaluationCriteria: string[];
+  scoringGuidelines: string;
+}
+
+interface GradingWorkflow {
+  step1: 'submit-code-for-grading-button';
+  step2: 'query-available-models';
+  step3: 'select-single-optimal-model';
+  step4: 'send-unified-prompt-to-model';
+  step5: 'parse-json-response-with-all-roles';
+  step6: 'display-individual-and-average-scores';
+  step7: 'record-scores-in-progress-tracking';
+}
+```
+
+### Role-Specific Evaluation Criteria
+
+#### Developer Role Evaluation
+- **Focus Areas**: Code quality, best practices, maintainability, technical implementation
+- **Evaluation Criteria**: Clean code principles, SOLID principles, error handling, performance
+- **Scoring Weight**: Equal weight with other roles in average calculation
+
+#### Architect Role Evaluation  
+- **Focus Areas**: System design, scalability, patterns, architectural decisions
+- **Evaluation Criteria**: Design patterns, separation of concerns, modularity, extensibility
+- **Scoring Weight**: Equal weight with other roles in average calculation
+
+#### SQA Role Evaluation
+- **Focus Areas**: Defects, edge cases, testing coverage, quality assurance concerns
+- **Evaluation Criteria**: Bug detection, test completeness, edge case handling, validation
+- **Scoring Weight**: Equal weight with other roles in average calculation
+
+#### Product Owner Role Evaluation
+- **Focus Areas**: Requirement fulfillment, user experience, business value delivery
+- **Evaluation Criteria**: Requirement compliance, usability, feature completeness, user value
+- **Scoring Weight**: Equal weight with other roles in average calculation
+
+### Progress Tracking Integration
+The grading system integrates with the user progress tracking to provide:
+- Historical trend analysis across all role perspectives
+- Individual role improvement tracking over time
+- Average score progression for overall skill development
+- Challenge-specific performance patterns by Kaiju type
+
 ## Data Models
 
 ### Challenge Model
@@ -390,11 +519,12 @@ interface UserProgress {
 interface GradingHistoryEntry {
   challengeId: string;
   gradingTimestamp: Date;
-  roleScores: Record<GradingRole, number>;
-  averageScore: number;
-  modelUsed: string[];
+  roleScores: Record<GradingRole, number>; // Individual scores from each role perspective
+  averageScore: number; // Calculated average of all role scores
+  modelUsed: string; // Single AI model used for unified evaluation
   challengeType: string;
   kaijuType: KaijuType;
+  rawResponse: Record<GradingRole, [number, string]>; // Original AI response format
 }
 ```
 
@@ -453,6 +583,7 @@ interface ZoomAFriendService {
 2. **Validation Errors**: Invalid code submissions, malformed requests
 3. **Generation Errors**: Challenge creation failures, AI service unavailable
 4. **Evaluation Errors**: Code compilation failures, test execution errors
+5. **AI Provider Errors**: Local LLM unreachable, remote model unavailable, quota exceeded (Requirement 9.5, 9.4)
 
 ### Error Handling Strategy
 ```typescript
@@ -462,6 +593,7 @@ interface AppError {
   severity: 'low' | 'medium' | 'high';
   recoverable: boolean;
   userMessage: string;
+  aiProviderContext?: AIProviderError;
 }
 
 class ErrorHandler {
@@ -470,6 +602,28 @@ class ErrorHandler {
     // Show user-friendly message
     // Attempt recovery if possible
     // Fallback to offline mode if needed
+    
+    // AI Provider specific error handling (Requirement 9.5, 9.4)
+    if (error.aiProviderContext) {
+      this.handleAIProviderError(error.aiProviderContext);
+    }
+  }
+  
+  static handleAIProviderError(error: AIProviderError): void {
+    switch (error.type) {
+      case 'connection-failed':
+        // Local LLM unreachable - provide clear error message and fallback options
+        this.showLocalLLMConnectionError();
+        break;
+      case 'model-unavailable':
+        // Remote model unavailable - automatically fallback to other coding-focused models
+        this.attemptModelFallback(error.fallbackOptions);
+        break;
+      case 'quota-exceeded':
+        // Implement request delay and quota management
+        this.handleQuotaExceeded();
+        break;
+    }
   }
 }
 ```
@@ -513,11 +667,15 @@ class ErrorHandler {
 - Desktop: 1024px+
 
 ### Mobile-Specific Features
-- Touch-optimized code editor with zoom controls
-- Collapsible panels for AI chat and Zoom-a-Friend
+- Touch-optimized code editor with zoom controls and horizontal scrolling (Requirement 6.2)
+- Collapsible panels for AI chat and Zoom-a-Friend with touch-friendly controls (Requirement 6.3, 6.4)
 - Swipe gestures for navigation between sections
 - Optimized virtual keyboard handling for code input
 - Reduced animation complexity for better performance
+- AI chat interface maintains full functionality on mobile devices (Requirement 6.3)
+- Zoom-a-Friend avatar interface optimized for smaller screens (Requirement 6.4)
+- Responsive interface optimized for touch interaction (Requirement 6.1)
+- Same functionality parity between mobile and desktop users (Requirement 6.5)
 
 ### Progressive Enhancement
 - Core functionality works without JavaScript

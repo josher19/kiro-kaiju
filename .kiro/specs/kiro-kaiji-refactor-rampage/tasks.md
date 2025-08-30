@@ -56,10 +56,13 @@
   - Create AIChatInterface Vue component with message display
   - Build chat input with send functionality
   - Implement message history and context management
+  - Add automatic scroll to bottom at average reading speed when new messages are added (not expanding window size)
   - Add loading states and error handling for AI responses
   - Integrate with multiple AI providers (Kiro AI, Local LLM, Remote LLM)
-  - Write tests for chat functionality and API integration
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - Implement AI capabilities for refactoring assistance, unit test generation, and requirement implementation guidance
+  - Ensure challenge and code state context is maintained throughout AI interactions
+  - Write tests for chat functionality, auto-scroll behavior, and API integration
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
 - [x] 8. Create (or Update) Zoom-a-Friend Panel Component
   - Build team member selection interface with animal icons and role titles
@@ -82,7 +85,7 @@
   - Write comprehensive tests for evaluation accuracy
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 10. Implement AI-Based Multi-Role Grading System
+- [x] 10. Implement AI-Based Multi-Role Grading System
   - Create AI grading service with single model approach for all role evaluations
   - Implement /v1/models endpoint querying to determine available models
   - Build unified prompt system that requests evaluation from all four roles in one API call
@@ -132,17 +135,18 @@
   - Implement connection detection and fallback logic for local LLM services
   - Add environment configuration for local LLM model selection
   - Create request delay mechanism to avoid quota issues
+  - Implement clear error messages when local LLM endpoint is unreachable with fallback options
   - Write unit tests for local LLM integration and error handling
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - _Requirements: 9.1, 9.3, 9.5_
 
 - [x] 15. Implement Remote LLM Integration with OpenRouter
   - Configure OpenRouter API integration with preferred model selection
   - Implement model preference hierarchy (openai/gpt-oss-20b, Claude, coding-focused models)
-  - Add automatic model fallback when preferred models are unavailable
-  - Implement request rate limiting and delay mechanisms
+  - Add automatic model fallback when preferred models are unavailable to other coding-focused models
+  - Implement request rate limiting and delay mechanisms to avoid hitting quotas
   - Create cost-aware model selection for free tier optimization
   - Write integration tests for OpenRouter API and model switching
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - _Requirements: 9.2, 9.3, 9.4, 9.6_
 
 - [x] 16. Fix Build Process and Ensure Test Suite Passes
   - DONE: Resolve all TypeScript compilation errors and type issues
