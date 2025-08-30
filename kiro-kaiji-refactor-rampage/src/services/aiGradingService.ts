@@ -1085,10 +1085,11 @@ DETAILED ANALYSIS:
 
     return `${overallAssessment}
 
-**Overall Score: ${averageScore}/100**
-**Individual Role Scores:** ${roleScores}
+- Overall Score: ${averageScore}/100
+- Individual Role Scores: ${roleScores}
 
-**Key Insights:**
+Key Insights:
+---
 ${roleEvaluations.map(evaluation => {
       // Clean up feedback to remove any JSON artifacts
       let cleanFeedback = evaluation.feedback;
@@ -1102,7 +1103,7 @@ ${roleEvaluations.map(evaluation => {
       const firstSentence = cleanFeedback.split(/[.!?]/)[0].trim();
       const finalFeedback = firstSentence + (firstSentence.endsWith('.') ? '' : '.');
       
-      return `• **${evaluation.role.toUpperCase()}**: ${finalFeedback}`;
+      return `• ${evaluation.role.toUpperCase()}: ${finalFeedback}`;
     }).join('\n')}
 
 Review the detailed analysis from each role to understand specific areas for improvement and build upon your strengths.`;

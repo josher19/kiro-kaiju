@@ -356,7 +356,7 @@ What specific aspect would you like help with?`;
           model: localConfig.model || 'local-model',
           messages,
           temperature: 0.7,
-          max_tokens: 100,
+          max_tokens: 240,
           stream: false
         }),
         signal: controller.signal
