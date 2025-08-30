@@ -523,7 +523,7 @@ What specific aspect would you like help with?`;
         headers: {
           'Authorization': `Bearer ${this.config.apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://kiro-kaiji.app',
+          'HTTP-Referer': typeof window !== 'undefined' ? (window.location?.origin ?? 'http://localhost:3000/') : 'https://kiro-kaiji.app',
           'X-Title': 'Kiro Kaiju: Refactor Rampage'
         },
         body: JSON.stringify({
