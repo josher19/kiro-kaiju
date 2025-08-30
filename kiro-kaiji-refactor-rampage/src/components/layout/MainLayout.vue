@@ -399,6 +399,7 @@ import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import ProgressTracker from '@/components/progress/ProgressTracker.vue'
 import GradingResults from '@/components/challenge/GradingResults.vue'
 import type { Challenge, ChallengeContext } from '@/types'
+import type { AIGradingResponse } from '@/types/api'
 import { ProgrammingLanguage } from '@/types'
 
 // Stores
@@ -427,7 +428,7 @@ const { currentLevel, nextLevelProgress, totalAchievements } = storeToRefs(progr
 const currentCode = ref('')
 const userId = ref('demo-user')
 const isGradingInProgress = ref(false)
-const gradingResults = ref(null)
+const gradingResults = ref<AIGradingResponse | null>(null)
 const showGradingResults = ref(false)
 
 // Navigation configuration

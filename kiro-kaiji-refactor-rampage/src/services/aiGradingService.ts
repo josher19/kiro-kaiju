@@ -243,7 +243,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
         );
       } catch (error) {
         console.error('Unified evaluation failed, falling back to sequential evaluation:', error);
-        
+
         // Fallback to sequential evaluation if unified approach fails
         roleEvaluations = await this.fallbackToSequentialEvaluation(
           submittedCode,
@@ -585,8 +585,14 @@ Please evaluate this code from the perspective of each of the following four rol
 - The response must be valid JSON that can be parsed
 - Do not include any text before or after the JSON object
 - Use exactly the keys: "developer", "architect", "sqa", "productOwner"
+- Do not use markdown code blocks or any formatting
+- Start your response immediately with the opening brace {
+- End your response with the closing brace }
 
-Evaluate the code now and respond with the JSON:`;
+Example format:
+{"developer": [85, "Good code structure with minor improvements needed"], "architect": [78, "Solid design but could use better patterns"], "sqa": [92, "Excellent testing and quality measures"], "productOwner": [88, "Requirements well addressed with good UX"]}
+
+Evaluate the code now and respond with ONLY the JSON object:`;
   }
 
   /**
@@ -648,27 +654,34 @@ DETAILED ANALYSIS:
     aiResponse: string,
     model: string
   ): RoleEvaluation[] {
+    console.log('Parsing unified evaluation response from model:', model);
+    console.log('Raw AI response:', aiResponse);
+
     try {
       // Clean the response to extract JSON
       let jsonStr = aiResponse.trim();
-      
+
       // Remove any markdown code blocks
       jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-      
+
       // Find JSON object in the response
       const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         jsonStr = jsonMatch[0];
       }
 
+      console.log('Extracted JSON string:', jsonStr);
+
       // Parse the JSON response
       const parsedResponse = JSON.parse(jsonStr);
+      console.log('Parsed JSON response:', parsedResponse);
 
       // Validate the expected structure
       const requiredKeys = ['developer', 'architect', 'sqa', 'productOwner'];
       const missingKeys = requiredKeys.filter(key => !(key in parsedResponse));
-      
+
       if (missingKeys.length > 0) {
+        console.warn(`Missing required keys: ${missingKeys.join(', ')}`);
         throw new Error(`Missing required keys: ${missingKeys.join(', ')}`);
       }
 
@@ -678,7 +691,10 @@ DETAILED ANALYSIS:
 
       // Process each role evaluation
       Object.entries(parsedResponse).forEach(([roleKey, evaluation]) => {
+        console.log(`Processing role ${roleKey}:`, evaluation);
+        
         if (!Array.isArray(evaluation) || evaluation.length !== 2) {
+          console.warn(`Invalid evaluation format for ${roleKey}:`, evaluation);
           throw new Error(`Invalid evaluation format for ${roleKey}`);
         }
 
@@ -687,11 +703,12 @@ DETAILED ANALYSIS:
         const roleEnum = this.mapRoleKeyToEnum(roleKey);
 
         if (!roleEnum) {
+          console.warn(`Unknown role key: ${roleKey}`);
           throw new Error(`Unknown role key: ${roleKey}`);
         }
 
         const promptConfig = this.gradingPrompts[roleEnum];
-        
+
         roleEvaluations.push({
           role: roleEnum,
           modelUsed: model,
@@ -703,13 +720,22 @@ DETAILED ANALYSIS:
         });
       });
 
+      console.log('Successfully parsed unified response, created evaluations:', roleEvaluations.length);
       return roleEvaluations;
 
     } catch (error) {
       console.error('Failed to parse unified evaluation response:', error);
       console.error('Raw response:', aiResponse);
 
+      // Try to extract individual role evaluations from a more flexible format
+      const flexibleEvaluations = this.tryFlexibleParsing(aiResponse, model);
+      if (flexibleEvaluations.length > 0) {
+        console.log('Successfully used flexible parsing, created evaluations:', flexibleEvaluations.length);
+        return flexibleEvaluations;
+      }
+
       // Fallback: create default evaluations for all roles
+      console.log('Using fallback evaluations');
       return this.createFallbackEvaluations(model, aiResponse);
     }
   }
@@ -729,6 +755,63 @@ DETAILED ANALYSIS:
   }
 
   /**
+   * Try flexible parsing for Local LLM responses that might not follow exact JSON format
+   */
+  private tryFlexibleParsing(aiResponse: string, model: string): RoleEvaluation[] {
+    console.log('Attempting flexible parsing...');
+    
+    const roleEvaluations: RoleEvaluation[] = [];
+    const timestamp = new Date();
+    
+    // Try to extract role-based evaluations using regex patterns
+    const rolePatterns = [
+      { role: GradingRole.DEVELOPER, patterns: ['developer', 'dev', 'code quality', 'technical'] },
+      { role: GradingRole.ARCHITECT, patterns: ['architect', 'architecture', 'design', 'system'] },
+      { role: GradingRole.SQA, patterns: ['sqa', 'qa', 'quality', 'testing', 'defect'] },
+      { role: GradingRole.PRODUCT_OWNER, patterns: ['product', 'owner', 'business', 'requirement'] }
+    ];
+
+    for (const { role, patterns } of rolePatterns) {
+      let score = 50; // Default score
+      let feedback = 'Evaluation completed but format was unclear.';
+      
+      // Look for score patterns
+      const scoreRegex = /(?:score|rating|grade)[\s:]*(\d+)/gi;
+      const scoreMatches = aiResponse.match(scoreRegex);
+      if (scoreMatches && scoreMatches.length > 0) {
+        const scoreMatch = scoreMatches[0].match(/(\d+)/);
+        if (scoreMatch) {
+          score = Math.min(100, Math.max(0, parseInt(scoreMatch[1])));
+        }
+      }
+
+      // Look for role-specific content
+      for (const pattern of patterns) {
+        const roleRegex = new RegExp(`${pattern}[\\s\\S]{0,200}`, 'gi');
+        const roleMatch = aiResponse.match(roleRegex);
+        if (roleMatch && roleMatch[0]) {
+          feedback = roleMatch[0].substring(0, 150) + '...';
+          break;
+        }
+      }
+
+      const promptConfig = this.gradingPrompts[role];
+      
+      roleEvaluations.push({
+        role,
+        modelUsed: model,
+        score,
+        feedback,
+        detailedAnalysis: `Flexible parsing extracted: ${feedback}\n\nFull response: ${aiResponse.substring(0, 300)}...`,
+        focusAreas: promptConfig.focusAreas,
+        timestamp
+      });
+    }
+
+    return roleEvaluations.length === 4 ? roleEvaluations : [];
+  }
+
+  /**
    * Create fallback evaluations when unified parsing fails
    */
   private createFallbackEvaluations(model: string, rawResponse: string): RoleEvaluation[] {
@@ -737,7 +820,7 @@ DETAILED ANALYSIS:
 
     return roles.map(role => {
       const promptConfig = this.gradingPrompts[role];
-      
+
       return {
         role,
         modelUsed: model,
@@ -757,21 +840,81 @@ DETAILED ANALYSIS:
     aiResponse: string,
     role: GradingRole
   ): { score: number; feedback: string; detailedAnalysis: string } {
+    console.log(`Parsing AI evaluation response for ${role}:`, aiResponse);
+    
     try {
-      // Extract score using regex (handle negative numbers)
-      const scoreMatch = aiResponse.match(/SCORE:\s*(-?\d+)/i);
-      const score = scoreMatch ? Math.min(100, Math.max(0, parseInt(scoreMatch[1]))) : 50;
+      // Extract score using multiple patterns
+      let score = 50; // Default score
+      
+      // Try different score patterns
+      const scorePatterns = [
+        /SCORE:\s*(-?\d+)/i,
+        /Score:\s*(-?\d+)/i,
+        /(\d+)\/100/i,
+        /(\d+)\s*out\s*of\s*100/i,
+        /rating:\s*(\d+)/i,
+        /grade:\s*(\d+)/i,
+        /(\d+)%/i
+      ];
+      
+      for (const pattern of scorePatterns) {
+        const match = aiResponse.match(pattern);
+        if (match) {
+          score = Math.min(100, Math.max(0, parseInt(match[1])));
+          console.log(`Found score ${score} using pattern:`, pattern);
+          break;
+        }
+      }
 
-      // Extract feedback section
-      const feedbackMatch = aiResponse.match(/FEEDBACK:\s*(.*?)(?=DETAILED ANALYSIS:|$)/is);
-      const feedback = feedbackMatch ? feedbackMatch[1].trim() :
-        `${role} evaluation completed. Please review the detailed analysis for specific insights.`;
+      // Extract feedback section with multiple patterns
+      let feedback = '';
+      const feedbackPatterns = [
+        /FEEDBACK:\s*(.*?)(?=DETAILED ANALYSIS:|$)/is,
+        /Feedback:\s*(.*?)(?=Analysis:|$)/is,
+        /Assessment:\s*(.*?)(?=Details:|$)/is,
+        /Evaluation:\s*(.*?)(?=Analysis:|$)/is
+      ];
+      
+      for (const pattern of feedbackPatterns) {
+        const match = aiResponse.match(pattern);
+        if (match && match[1].trim()) {
+          feedback = match[1].trim();
+          console.log(`Found feedback using pattern:`, pattern);
+          break;
+        }
+      }
+      
+      if (!feedback) {
+        // Extract first meaningful sentence as feedback
+        const sentences = aiResponse.split(/[.!?]+/);
+        feedback = sentences.find(s => s.trim().length > 20)?.trim() || 
+                  `${role} evaluation completed. Please review the detailed analysis.`;
+      }
 
       // Extract detailed analysis section
-      const analysisMatch = aiResponse.match(/DETAILED ANALYSIS:\s*(.*?)$/is);
-      const detailedAnalysis = analysisMatch ? analysisMatch[1].trim() :
-        `Detailed analysis from ${role} perspective: ${aiResponse.substring(0, 500)}...`;
+      let detailedAnalysis = '';
+      const analysisPatterns = [
+        /DETAILED ANALYSIS:\s*(.*?)$/is,
+        /Analysis:\s*(.*?)$/is,
+        /Details:\s*(.*?)$/is,
+        /Detailed:\s*(.*?)$/is
+      ];
+      
+      for (const pattern of analysisPatterns) {
+        const match = aiResponse.match(pattern);
+        if (match && match[1].trim()) {
+          detailedAnalysis = match[1].trim();
+          console.log(`Found detailed analysis using pattern:`, pattern);
+          break;
+        }
+      }
+      
+      if (!detailedAnalysis) {
+        detailedAnalysis = `Detailed analysis from ${role} perspective:\n\n${aiResponse.substring(0, 500)}${aiResponse.length > 500 ? '...' : ''}`;
+      }
 
+      console.log(`Parsed ${role} evaluation - Score: ${score}, Feedback length: ${feedback.length}`);
+      
       return {
         score,
         feedback,
@@ -780,9 +923,12 @@ DETAILED ANALYSIS:
     } catch (error) {
       console.error('Failed to parse AI evaluation response:', error);
 
-      // Fallback parsing
+      // Fallback parsing - try to extract any numbers and meaningful text
+      const numbers = aiResponse.match(/\d+/g);
+      const fallbackScore = numbers ? Math.min(100, Math.max(0, parseInt(numbers[0]))) : 50;
+      
       return {
-        score: 50,
+        score: fallbackScore,
         feedback: `${role} evaluation completed with parsing issues. Raw response available in detailed analysis.`,
         detailedAnalysis: aiResponse
       };
