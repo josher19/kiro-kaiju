@@ -680,7 +680,12 @@ DETAILED ANALYSIS:
 
       // Validate the expected structure
       const requiredKeys = ['developer', 'architect', 'sqa', 'productOwner'];
+      const presentKeys = Object.keys(parsedResponse);
       const missingKeys = requiredKeys.filter(key => !(key in parsedResponse));
+
+      console.log('Present keys in response:', presentKeys);
+      console.log('Required keys:', requiredKeys);
+      console.log('Missing keys:', missingKeys);
 
       if (missingKeys.length > 0) {
         console.warn(`Missing required keys: ${missingKeys.join(', ')}`);
@@ -694,13 +699,21 @@ DETAILED ANALYSIS:
       // Process each role evaluation
       Object.entries(parsedResponse).forEach(([roleKey, evaluation]) => {
         console.log(`Processing role ${roleKey}:`, evaluation);
+        console.log(`Evaluation type: ${typeof evaluation}, isArray: ${Array.isArray(evaluation)}`);
         
-        if (!Array.isArray(evaluation) || evaluation.length !== 2) {
-          console.warn(`Invalid evaluation format for ${roleKey}:`, evaluation);
-          throw new Error(`Invalid evaluation format for ${roleKey}`);
+        if (!Array.isArray(evaluation)) {
+          console.warn(`Evaluation for ${roleKey} is not an array:`, evaluation);
+          throw new Error(`Invalid evaluation format for ${roleKey} - expected array, got ${typeof evaluation}`);
+        }
+        
+        if (evaluation.length !== 2) {
+          console.warn(`Evaluation array for ${roleKey} has wrong length (${evaluation.length}):`, evaluation);
+          throw new Error(`Invalid evaluation format for ${roleKey} - expected array of length 2, got ${evaluation.length}`);
         }
 
         const [score, reason] = evaluation;
+        console.log(`Extracted score: ${score} (type: ${typeof score}), reason: ${reason} (type: ${typeof reason})`);
+        
         const numericScore = Math.min(100, Math.max(0, parseInt(String(score))));
         const roleEnum = this.mapRoleKeyToEnum(roleKey);
 
@@ -720,6 +733,8 @@ DETAILED ANALYSIS:
           focusAreas: promptConfig.focusAreas,
           timestamp
         });
+        
+        console.log(`Successfully processed ${roleKey} with score ${numericScore}`);
       });
 
       console.log('Successfully parsed unified response, created evaluations:', roleEvaluations.length);
@@ -765,7 +780,48 @@ DETAILED ANALYSIS:
     const roleEvaluations: RoleEvaluation[] = [];
     const timestamp = new Date();
     
-    // Try to extract role-based evaluations using regex patterns
+    // First, try to extract JSON-like structures with role arrays
+    const roleKeys = ['developer', 'architect', 'sqa', 'productOwner'];
+    let foundValidArrays = 0;
+    
+    for (const roleKey of roleKeys) {
+      const roleEnum = this.mapRoleKeyToEnum(roleKey);
+      if (!roleEnum) continue;
+      
+      // Look for patterns like "developer":[80,"reason text"]
+      const arrayPattern = new RegExp(`"${roleKey}"\\s*:\\s*\\[(\\d+)\\s*,\\s*"([^"]*)"\\]`, 'i');
+      const match = aiResponse.match(arrayPattern);
+      
+      if (match) {
+        const score = Math.min(100, Math.max(0, parseInt(match[1])));
+        const feedback = match[2];
+        const promptConfig = this.gradingPrompts[roleEnum];
+        
+        roleEvaluations.push({
+          role: roleEnum,
+          modelUsed: model,
+          score,
+          feedback,
+          detailedAnalysis: `${roleEnum.toUpperCase()} Evaluation: ${feedback}\n\nThis evaluation focused on: ${promptConfig.focusAreas.join(', ')}.`,
+          focusAreas: promptConfig.focusAreas,
+          timestamp
+        });
+        
+        foundValidArrays++;
+        console.log(`Extracted ${roleKey}: score=${score}, feedback="${feedback}"`);
+      }
+    }
+    
+    // If we found all 4 roles with valid array format, return them
+    if (foundValidArrays === 4) {
+      console.log('Successfully extracted all 4 roles using array pattern matching');
+      return roleEvaluations;
+    }
+    
+    // Fallback to pattern-based extraction
+    console.log('Array pattern matching failed, trying pattern-based extraction');
+    roleEvaluations.length = 0; // Clear previous attempts
+    
     const rolePatterns = [
       { role: GradingRole.DEVELOPER, patterns: ['developer', 'dev', 'code quality', 'technical'] },
       { role: GradingRole.ARCHITECT, patterns: ['architect', 'architecture', 'design', 'system'] },
