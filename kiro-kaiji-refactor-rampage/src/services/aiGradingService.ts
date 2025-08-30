@@ -540,7 +540,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
     challenge: Challenge
   ): string {
     return `You are an AI code evaluation system that provides comprehensive feedback from multiple professional perspectives. 
-    You will return JSON with { role: [score, reason] }, such as: {"developer": [85, "Good code structure with minor improvements needed"], "architect": [78, "Solid design but could use better patterns"], "sqa": [92, "Excellent testing and quality measures"], "productOwner": [88, "Requirements well addressed with good UX"]}
+    You will return ONLY JSON with { role: [score, reason] }, such as: {"developer": [85, "Good code structure with minor improvements needed"], "architect": [78, "Solid design but could use better patterns"], "sqa": [92, "Excellent testing and quality measures"], "productOwner": [88, "Requirements well addressed with good UX"]}
     You will evaluate the provided code from four different role perspectives simultaneously and return a structured JSON response.
 
 **Challenge Context:**
@@ -788,13 +788,30 @@ DETAILED ANALYSIS:
       const roleEnum = this.mapRoleKeyToEnum(roleKey);
       if (!roleEnum) continue;
       
-      // Look for patterns like "developer":[80,"reason text"]
-      const arrayPattern = new RegExp(`"${roleKey}"\\s*:\\s*\\[(\\d+)\\s*,\\s*"([^"]*)"\\]`, 'i');
-      const match = aiResponse.match(arrayPattern);
+      // Look for patterns like "developer":[80,"reason text"] - handle both complete and incomplete patterns
+      const completePattern = new RegExp(`"${roleKey}"\\s*:\\s*\\[(\\d+)\\s*,\\s*"([^"]*)"\\]`, 'i');
+      const incompletePattern = new RegExp(`"${roleKey}"\\s*:\\s*\\[(\\d+)`, 'i');
+      
+      let match = aiResponse.match(completePattern);
+      if (!match) {
+        // Try incomplete pattern for truncated responses
+        match = aiResponse.match(incompletePattern);
+        if (match) {
+          // Create a fallback reason for incomplete responses
+          const score = parseInt(match[1]);
+          const fallbackReasons: Record<string, string> = {
+            'developer': 'Code evaluation completed',
+            'architect': 'Architecture assessment completed', 
+            'sqa': 'Quality assurance review completed',
+            'productOwner': 'Requirements evaluation completed'
+          };
+          match = [match[0], match[1], fallbackReasons[roleKey] || 'Evaluation completed'];
+        }
+      }
       
       if (match) {
         const score = Math.min(100, Math.max(0, parseInt(match[1])));
-        const feedback = match[2];
+        const feedback = match[2] || 'Evaluation completed';
         const promptConfig = this.gradingPrompts[roleEnum];
         
         roleEvaluations.push({
@@ -812,14 +829,47 @@ DETAILED ANALYSIS:
       }
     }
     
-    // If we found all 4 roles with valid array format, return them
-    if (foundValidArrays === 4) {
-      console.log('Successfully extracted all 4 roles using array pattern matching');
+    // If we found at least 3 roles with valid array format, use them and fill in missing ones
+    if (foundValidArrays >= 3) {
+      console.log(`Successfully extracted ${foundValidArrays} roles using array pattern matching`);
+      
+      // Fill in any missing roles with pattern-based extraction
+      const extractedRoles = new Set(roleEvaluations.map(evaluation => evaluation.role));
+      const allRoles = [GradingRole.DEVELOPER, GradingRole.ARCHITECT, GradingRole.SQA, GradingRole.PRODUCT_OWNER];
+      
+      for (const role of allRoles) {
+        if (!extractedRoles.has(role)) {
+          console.log(`Missing ${role}, attempting to extract from response`);
+          
+          // Try to extract score for this specific role
+          let score = 50;
+          let feedback = 'Evaluation completed but format was unclear.';
+          
+          // Look for any score patterns in the response
+          const scoreMatches = aiResponse.match(/\d+/g);
+          if (scoreMatches && scoreMatches.length > 0) {
+            // Use the last available score as fallback
+            score = Math.min(100, Math.max(0, parseInt(scoreMatches[scoreMatches.length - 1])));
+          }
+          
+          const promptConfig = this.gradingPrompts[role];
+          roleEvaluations.push({
+            role,
+            modelUsed: model,
+            score,
+            feedback,
+            detailedAnalysis: `${role.toUpperCase()} Evaluation: ${feedback}\n\nThis evaluation focused on: ${promptConfig.focusAreas.join(', ')}.`,
+            focusAreas: promptConfig.focusAreas,
+            timestamp
+          });
+        }
+      }
+      
       return roleEvaluations;
     }
     
-    // Fallback to pattern-based extraction
-    console.log('Array pattern matching failed, trying pattern-based extraction');
+    // Fallback to pattern-based extraction only if we found very few valid arrays
+    console.log('Array pattern matching found insufficient results, trying pattern-based extraction');
     roleEvaluations.length = 0; // Clear previous attempts
     
     const rolePatterns = [
@@ -1039,9 +1089,21 @@ DETAILED ANALYSIS:
 **Individual Role Scores:** ${roleScores}
 
 **Key Insights:**
-${roleEvaluations.map(evaluation =>
-      `• **${evaluation.role.toUpperCase()}**: ${evaluation.feedback.split('.')[0]}.`
-    ).join('\n')}
+${roleEvaluations.map(evaluation => {
+      // Clean up feedback to remove any JSON artifacts
+      let cleanFeedback = evaluation.feedback;
+      
+      // Remove JSON-like patterns from feedback
+      cleanFeedback = cleanFeedback.replace(/["\[\]{}:]/g, '');
+      cleanFeedback = cleanFeedback.replace(/^\w+\s*/, ''); // Remove role name prefix
+      cleanFeedback = cleanFeedback.trim();
+      
+      // Take first sentence and ensure it ends with a period
+      const firstSentence = cleanFeedback.split(/[.!?]/)[0].trim();
+      const finalFeedback = firstSentence + (firstSentence.endsWith('.') ? '' : '.');
+      
+      return `• **${evaluation.role.toUpperCase()}**: ${finalFeedback}`;
+    }).join('\n')}
 
 Review the detailed analysis from each role to understand specific areas for improvement and build upon your strengths.`;
   }
