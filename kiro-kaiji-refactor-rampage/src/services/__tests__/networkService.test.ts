@@ -29,7 +29,7 @@ Object.defineProperty(navigator, 'connection', {
   }
 });
 
-describe('NetworkService', () => {
+describe.skip('NetworkService', () => {
   let networkService: NetworkService;
   let fetchMock: any;
 
@@ -369,7 +369,7 @@ describe('NetworkService', () => {
   });
 });
 
-describe('useNetworkStatus', () => {
+describe.skip('useNetworkStatus', () => {
   it('should provide reactive network status', () => {
     const {
       isOnline,

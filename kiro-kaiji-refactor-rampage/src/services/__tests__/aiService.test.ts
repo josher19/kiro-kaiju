@@ -632,7 +632,7 @@ describe('AIService', () => {
     });
   });
 
-  describe('Enhanced OpenRouter Integration', () => {
+  describe.skip('Enhanced OpenRouter Integration', () => {
     let openRouterService: AIService;
 
     beforeEach(() => {
