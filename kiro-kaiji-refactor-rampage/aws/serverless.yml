@@ -1,0 +1,110 @@
+service: kiro-kaiji-refactor-rampage
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
+    STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource: "*"
+
+functions:
+  challengeGeneration:
+    handler: src/handlers/challengeHandler.generateChallenge
+    events:
+      - http:
+          path: /api/challenges/generate
+          method: post
+          cors: true
+    environment:
+      BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+
+  aiGrading:
+    handler: src/handlers/gradingHandler.gradeCode
+    events:
+      - http:
+          path: /api/grading/submit
+          method: post
+          cors: true
+    environment:
+      BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+
+  userProgress:
+    handler: src/handlers/progressHandler.updateProgress
+    events:
+      - http:
+          path: /api/progress/{userId}
+          method: get
+          cors: true
+      - http:
+          path: /api/progress/{userId}
+          method: put
+          cors: true
+
+  auth:
+    handler: src/handlers/authHandler.authenticate
+    events:
+      - http:
+          path: /api/auth/login
+          method: post
+          cors: true
+      - http:
+          path: /api/auth/session
+          method: get
+          cors: true
+
+  aiModels:
+    handler: src/handlers/aiHandler.getModels
+    events:
+      - http:
+          path: /v1/models
+          method: get
+          cors: true
+
+  aiChat:
+    handler: src/handlers/aiHandler.chatCompletion
+    events:
+      - http:
+          path: /v1/chat/completions
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    UserProgressTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: challengeId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: challengeId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+plugins:
+  - serverless-offline
