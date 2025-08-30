@@ -213,6 +213,7 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
 
   /**
    * Submit code for comprehensive AI grading from multiple role perspectives
+   * Uses unified prompt system that requests evaluation from all four roles in one API call
    */
   async submitForGrading(
     challengeId: string,
@@ -226,48 +227,30 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
       // Step 1: Query available models
       const availableModels = await this.getAvailableModels();
 
-      // Step 2: Determine model assignment strategy
-      const modelStrategy = this.selectModelsForRoles(availableModels);
+      // Step 2: Select single optimal model for unified evaluation
+      const selectedModel = this.selectOptimalModel(availableModels);
 
-      // Step 3: Perform sequential role evaluations
-      const roleEvaluations: RoleEvaluation[] = [];
-      const evaluationOrder = [
-        GradingRole.DEVELOPER,
-        GradingRole.ARCHITECT,
-        GradingRole.SQA,
-        GradingRole.PRODUCT_OWNER
-      ];
+      // Step 3: Perform unified role evaluation with single API call
+      let roleEvaluations: RoleEvaluation[] = [];
 
-      for (const role of evaluationOrder) {
-        try {
-          const evaluation = await this.evaluateWithRole(
-            submittedCode,
-            role,
-            modelStrategy.modelAssignments[role],
-            requirements,
-            challenge
-          );
-          roleEvaluations.push(evaluation);
-
-          // Apply delay between role evaluations to avoid rate limits
-          if (role !== GradingRole.PRODUCT_OWNER) { // Don't delay after last evaluation
-            await this.delay(this.requestDelay);
-          }
-        } catch (error) {
-          console.error(`Failed to evaluate with ${role} role:`, error);
-
-          // Create fallback evaluation for failed role
-          const fallbackEvaluation: RoleEvaluation = {
-            role,
-            modelUsed: 'fallback',
-            score: 50, // Neutral score for failed evaluation
-            feedback: `Unable to complete ${role} evaluation due to technical issues. Please try again later.`,
-            detailedAnalysis: `The ${role} evaluation could not be completed. This may be due to model availability or network issues.`,
-            focusAreas: this.gradingPrompts[role].focusAreas,
-            timestamp: new Date()
-          };
-          roleEvaluations.push(fallbackEvaluation);
-        }
+      try {
+        // Use unified prompt system for single API call
+        roleEvaluations = await this.evaluateWithUnifiedPrompt(
+          submittedCode,
+          selectedModel,
+          requirements,
+          challenge
+        );
+      } catch (error) {
+        console.error('Unified evaluation failed, falling back to sequential evaluation:', error);
+        
+        // Fallback to sequential evaluation if unified approach fails
+        roleEvaluations = await this.fallbackToSequentialEvaluation(
+          submittedCode,
+          availableModels,
+          requirements,
+          challenge
+        );
       }
 
       // Step 4: Calculate average score
@@ -335,7 +318,37 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
   }
 
   /**
-   * Select models for each role based on available models
+   * Select single optimal model from available models for unified evaluation
+   */
+  private selectOptimalModel(availableModels: string[]): string {
+    if (availableModels.length === 0) {
+      return 'default-model';
+    }
+
+    // Preferred model order for coding tasks
+    const preferredModels = [
+      'openai/gpt-4o-mini',
+      'anthropic/claude-3-haiku',
+      'meta-llama/llama-3.1-8b-instruct:free',
+      'microsoft/wizardlm-2-8x22b',
+      'google/gemma-2-9b-it:free',
+      'local-model',
+      'kiro-ai'
+    ];
+
+    // Find the first preferred model that's available
+    for (const preferred of preferredModels) {
+      if (availableModels.includes(preferred)) {
+        return preferred;
+      }
+    }
+
+    // If no preferred model is found, use the first available
+    return availableModels[0];
+  }
+
+  /**
+   * Select models for each role based on available models (fallback method)
    */
   private selectModelsForRoles(availableModels: string[]): ModelSelectionStrategy {
     const modelAssignments: Record<GradingRole, string> = {} as Record<GradingRole, string>;
@@ -365,7 +378,99 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
   }
 
   /**
-   * Evaluate code with specific role perspective using assigned model
+   * Evaluate code using unified prompt system that requests all four role perspectives in one API call
+   */
+  private async evaluateWithUnifiedPrompt(
+    code: string,
+    model: string,
+    requirements: string[],
+    challenge: Challenge
+  ): Promise<RoleEvaluation[]> {
+    const unifiedPrompt = this.buildUnifiedEvaluationPrompt(code, requirements, challenge);
+    const aiService = getAIService();
+
+    // Create challenge context for the AI service
+    const challengeContext = {
+      challenge,
+      currentCode: code,
+      attempts: 1,
+      startTime: new Date(),
+      lastModified: new Date()
+    };
+
+    // Apply delay before calling LLM to avoid quotas
+    await this.delay(this.requestDelay);
+
+    const response = await aiService.sendMessage(unifiedPrompt, challengeContext);
+
+    if (!response.success || !response.message) {
+      throw new Error('AI service returned unsuccessful response');
+    }
+
+    // Parse the unified JSON response
+    const roleEvaluations = this.parseUnifiedEvaluationResponse(
+      response.message.content,
+      model
+    );
+
+    return roleEvaluations;
+  }
+
+  /**
+   * Fallback to sequential evaluation if unified approach fails
+   */
+  private async fallbackToSequentialEvaluation(
+    code: string,
+    availableModels: string[],
+    requirements: string[],
+    challenge: Challenge
+  ): Promise<RoleEvaluation[]> {
+    const modelStrategy = this.selectModelsForRoles(availableModels);
+    const roleEvaluations: RoleEvaluation[] = [];
+    const evaluationOrder = [
+      GradingRole.DEVELOPER,
+      GradingRole.ARCHITECT,
+      GradingRole.SQA,
+      GradingRole.PRODUCT_OWNER
+    ];
+
+    for (const role of evaluationOrder) {
+      try {
+        const evaluation = await this.evaluateWithRole(
+          code,
+          role,
+          modelStrategy.modelAssignments[role],
+          requirements,
+          challenge
+        );
+        roleEvaluations.push(evaluation);
+
+        // Apply delay between role evaluations to avoid rate limits
+        if (role !== GradingRole.PRODUCT_OWNER) {
+          await this.delay(this.requestDelay);
+        }
+      } catch (error) {
+        console.error(`Failed to evaluate with ${role} role:`, error);
+
+        // Create fallback evaluation for failed role
+        const fallbackEvaluation: RoleEvaluation = {
+          role,
+          modelUsed: 'fallback',
+          score: 50,
+          feedback: `Unable to complete ${role} evaluation due to technical issues. Please try again later.`,
+          detailedAnalysis: `The ${role} evaluation could not be completed. This may be due to model availability or network issues.`,
+          focusAreas: this.gradingPrompts[role].focusAreas,
+          timestamp: new Date()
+        };
+        roleEvaluations.push(fallbackEvaluation);
+      }
+    }
+
+    return roleEvaluations;
+  }
+
+  /**
+   * Evaluate code with specific role perspective using assigned model (fallback method)
    */
   private async evaluateWithRole(
     code: string,
@@ -427,7 +532,65 @@ Provide a score from 0-100 and detailed feedback on how well the solution meets 
   }
 
   /**
-   * Build role-specific evaluation prompt
+   * Build unified evaluation prompt that requests all four role perspectives in one request
+   */
+  private buildUnifiedEvaluationPrompt(
+    code: string,
+    requirements: string[],
+    challenge: Challenge
+  ): string {
+    return `You are an AI code evaluation system that provides comprehensive feedback from multiple professional perspectives. You will evaluate the provided code from four different role perspectives simultaneously and return a structured JSON response.
+
+**Challenge Context:**
+- Challenge: ${challenge.title || 'Code Evaluation Challenge'}
+- Kaiju Monster: ${challenge.kaiju.name} (${challenge.kaiju.description})
+- Language: ${challenge.config.language}
+- Category: ${challenge.config.category}
+- Difficulty: ${challenge.config.difficulty}/5
+
+**Requirements to Evaluate Against:**
+${requirements.map((req, index) => `${index + 1}. ${req}`).join('\n')}
+
+**Code to Evaluate:**
+\`\`\`${challenge.config.language}
+${code}
+\`\`\`
+
+**Evaluation Instructions:**
+Please evaluate this code from the perspective of each of the following four roles and provide scores (0-100) and brief reasons for each:
+
+1. **DEVELOPER ROLE**: Focus on code quality, best practices, maintainability, and technical implementation
+   - Evaluation criteria: clean code principles, SOLID principles, error handling, performance, readability
+
+2. **ARCHITECT ROLE**: Focus on system design, scalability, patterns, and architectural decisions
+   - Evaluation criteria: design patterns, separation of concerns, modularity, scalability, architectural consistency
+
+3. **SQA ROLE**: Focus on defects, edge cases, testing coverage, and quality assurance concerns
+   - Evaluation criteria: bug detection, edge case handling, test completeness, input validation, error robustness
+
+4. **PRODUCT_OWNER ROLE**: Focus on requirement fulfillment, user experience, and business value delivery
+   - Evaluation criteria: requirement compliance, user experience, feature completeness, business value alignment
+
+**CRITICAL: You must respond with ONLY a valid JSON object in exactly this format:**
+{
+  "developer": [score, "brief reason for score"],
+  "architect": [score, "brief reason for score"],
+  "sqa": [score, "brief reason for score"],
+  "productOwner": [score, "brief reason for score"]
+}
+
+**Requirements for the response:**
+- Each score must be an integer between 0 and 100
+- Each reason must be a concise explanation (1-2 sentences) for the score
+- The response must be valid JSON that can be parsed
+- Do not include any text before or after the JSON object
+- Use exactly the keys: "developer", "architect", "sqa", "productOwner"
+
+Evaluate the code now and respond with the JSON:`;
+  }
+
+  /**
+   * Build role-specific evaluation prompt (fallback method)
    */
   private buildRoleEvaluationPrompt(
     code: string,
@@ -478,7 +641,117 @@ DETAILED ANALYSIS:
   }
 
   /**
-   * Parse AI evaluation response to extract score and feedback
+   * Parse unified AI evaluation response in JSON format
+   * Expected format: {"developer": [score, "reason"], "architect": [score, "reason"], "sqa": [score, "reason"], "productOwner": [score, "reason"]}
+   */
+  private parseUnifiedEvaluationResponse(
+    aiResponse: string,
+    model: string
+  ): RoleEvaluation[] {
+    try {
+      // Clean the response to extract JSON
+      let jsonStr = aiResponse.trim();
+      
+      // Remove any markdown code blocks
+      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      
+      // Find JSON object in the response
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
+      }
+
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(jsonStr);
+
+      // Validate the expected structure
+      const requiredKeys = ['developer', 'architect', 'sqa', 'productOwner'];
+      const missingKeys = requiredKeys.filter(key => !(key in parsedResponse));
+      
+      if (missingKeys.length > 0) {
+        throw new Error(`Missing required keys: ${missingKeys.join(', ')}`);
+      }
+
+      // Convert to RoleEvaluation objects
+      const roleEvaluations: RoleEvaluation[] = [];
+      const timestamp = new Date();
+
+      // Process each role evaluation
+      Object.entries(parsedResponse).forEach(([roleKey, evaluation]) => {
+        if (!Array.isArray(evaluation) || evaluation.length !== 2) {
+          throw new Error(`Invalid evaluation format for ${roleKey}`);
+        }
+
+        const [score, reason] = evaluation;
+        const numericScore = Math.min(100, Math.max(0, parseInt(String(score))));
+        const roleEnum = this.mapRoleKeyToEnum(roleKey);
+
+        if (!roleEnum) {
+          throw new Error(`Unknown role key: ${roleKey}`);
+        }
+
+        const promptConfig = this.gradingPrompts[roleEnum];
+        
+        roleEvaluations.push({
+          role: roleEnum,
+          modelUsed: model,
+          score: numericScore,
+          feedback: String(reason),
+          detailedAnalysis: `${roleEnum.toUpperCase()} Evaluation: ${reason}\n\nThis evaluation focused on: ${promptConfig.focusAreas.join(', ')}.`,
+          focusAreas: promptConfig.focusAreas,
+          timestamp
+        });
+      });
+
+      return roleEvaluations;
+
+    } catch (error) {
+      console.error('Failed to parse unified evaluation response:', error);
+      console.error('Raw response:', aiResponse);
+
+      // Fallback: create default evaluations for all roles
+      return this.createFallbackEvaluations(model, aiResponse);
+    }
+  }
+
+  /**
+   * Map role key from JSON response to GradingRole enum
+   */
+  private mapRoleKeyToEnum(roleKey: string): GradingRole | null {
+    const roleMap: Record<string, GradingRole> = {
+      'developer': GradingRole.DEVELOPER,
+      'architect': GradingRole.ARCHITECT,
+      'sqa': GradingRole.SQA,
+      'productOwner': GradingRole.PRODUCT_OWNER
+    };
+
+    return roleMap[roleKey] || null;
+  }
+
+  /**
+   * Create fallback evaluations when unified parsing fails
+   */
+  private createFallbackEvaluations(model: string, rawResponse: string): RoleEvaluation[] {
+    const roles = [GradingRole.DEVELOPER, GradingRole.ARCHITECT, GradingRole.SQA, GradingRole.PRODUCT_OWNER];
+    const timestamp = new Date();
+
+    return roles.map(role => {
+      const promptConfig = this.gradingPrompts[role];
+      
+      return {
+        role,
+        modelUsed: model,
+        score: 50, // Neutral fallback score
+        feedback: `Unable to parse ${role} evaluation from AI response. Please try again.`,
+        detailedAnalysis: `Parsing failed for ${role} evaluation. Raw AI response: ${rawResponse.substring(0, 200)}...`,
+        focusAreas: promptConfig.focusAreas,
+        timestamp
+      };
+    });
+  }
+
+  /**
+   * Parse AI evaluation response to extract score and feedback (fallback method)
    */
   private parseAIEvaluationResponse(
     aiResponse: string,

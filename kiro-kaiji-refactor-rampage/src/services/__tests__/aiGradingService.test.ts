@@ -15,9 +15,10 @@ import { KaijuType } from '@/types/kaiju';
 import { ProgrammingLanguage, ChallengeCategory, DifficultyLevel } from '@/types/challenge';
 
 // Mock the AI service
+const mockSendMessage = vi.fn();
 vi.mock('../aiService', () => ({
   getAIService: vi.fn(() => ({
-    sendMessage: vi.fn(),
+    sendMessage: mockSendMessage,
     config: {
       provider: 'local-llm',
       localLLM: {
@@ -47,6 +48,9 @@ describe('AIGradingService', () => {
 
     // Create grading service instance
     gradingService = createAIGradingService(100); // Short delay for tests
+
+    // Reset mocks
+    mockSendMessage.mockReset();
 
     // Mock challenge data
     mockKaiju = {
@@ -490,10 +494,7 @@ The implementation shows solid understanding of the requirements. The code struc
 
   describe('Error Handling', () => {
     it('should handle AI service errors gracefully', async () => {
-      const { getAIService } = await import('../aiService');
-      const mockAIService = getAIService();
-      
-      (mockAIService.sendMessage as any).mockRejectedValueOnce(new Error('AI service error'));
+      mockSendMessage.mockRejectedValue(new Error('AI service error'));
 
       // Mock models endpoint
       (fetch as any).mockResolvedValueOnce({
@@ -525,36 +526,170 @@ The implementation shows solid understanding of the requirements. The code struc
     });
   });
 
-  describe('Integration Tests', () => {
-    it('should complete full grading workflow', async () => {
-      // Mock successful AI responses
-      const { getAIService } = await import('../aiService');
-      const mockAIService = getAIService();
+  describe('Unified Prompt System', () => {
+    it('should build unified evaluation prompt correctly', () => {
+      const code = 'function test() { return "hello"; }';
+      const requirements = ['Fix bugs', 'Add tests'];
+
+      const prompt = gradingService['buildUnifiedEvaluationPrompt'](
+        code,
+        requirements,
+        mockChallenge
+      );
+
+      expect(prompt).toContain('four different role perspectives simultaneously');
+      expect(prompt).toContain('DEVELOPER ROLE');
+      expect(prompt).toContain('ARCHITECT ROLE');
+      expect(prompt).toContain('SQA ROLE');
+      expect(prompt).toContain('PRODUCT_OWNER ROLE');
+      expect(prompt).toContain('valid JSON object');
+      expect(prompt).toContain('"developer": [score, "brief reason for score"]');
+      expect(prompt).toContain(code);
+    });
+
+    it('should parse unified JSON response correctly', () => {
+      const mockResponse = `{
+        "developer": [85, "Good code quality with proper structure"],
+        "architect": [78, "Solid design but could use better patterns"],
+        "sqa": [92, "Excellent edge case handling and validation"],
+        "productOwner": [88, "Requirements well met with good UX"]
+      }`;
+
+      const evaluations = gradingService['parseUnifiedEvaluationResponse'](mockResponse, 'test-model');
+
+      expect(evaluations).toHaveLength(4);
       
-      (mockAIService.sendMessage as any).mockImplementation(() => Promise.resolve({
+      const developerEval = evaluations.find(e => e.role === GradingRole.DEVELOPER);
+      expect(developerEval?.score).toBe(85);
+      expect(developerEval?.feedback).toBe('Good code quality with proper structure');
+      expect(developerEval?.modelUsed).toBe('test-model');
+
+      const architectEval = evaluations.find(e => e.role === GradingRole.ARCHITECT);
+      expect(architectEval?.score).toBe(78);
+      expect(architectEval?.feedback).toBe('Solid design but could use better patterns');
+
+      const sqaEval = evaluations.find(e => e.role === GradingRole.SQA);
+      expect(sqaEval?.score).toBe(92);
+      expect(sqaEval?.feedback).toBe('Excellent edge case handling and validation');
+
+      const poEval = evaluations.find(e => e.role === GradingRole.PRODUCT_OWNER);
+      expect(poEval?.score).toBe(88);
+      expect(poEval?.feedback).toBe('Requirements well met with good UX');
+    });
+
+    it('should handle JSON response with markdown code blocks', () => {
+      const mockResponse = `Here's the evaluation:
+
+\`\`\`json
+{
+  "developer": [75, "Code is functional but needs refactoring"],
+  "architect": [70, "Architecture is basic but adequate"],
+  "sqa": [80, "Good testing approach with minor gaps"],
+  "productOwner": [85, "User requirements are well addressed"]
+}
+\`\`\`
+
+That's my assessment.`;
+
+      const evaluations = gradingService['parseUnifiedEvaluationResponse'](mockResponse, 'test-model');
+
+      expect(evaluations).toHaveLength(4);
+      expect(evaluations.find(e => e.role === GradingRole.DEVELOPER)?.score).toBe(75);
+      expect(evaluations.find(e => e.role === GradingRole.ARCHITECT)?.score).toBe(70);
+      expect(evaluations.find(e => e.role === GradingRole.SQA)?.score).toBe(80);
+      expect(evaluations.find(e => e.role === GradingRole.PRODUCT_OWNER)?.score).toBe(85);
+    });
+
+    it('should handle malformed JSON response gracefully', () => {
+      const mockResponse = 'This is not a valid JSON response';
+
+      const evaluations = gradingService['parseUnifiedEvaluationResponse'](mockResponse, 'test-model');
+
+      expect(evaluations).toHaveLength(4);
+      evaluations.forEach(evaluation => {
+        expect(evaluation.score).toBe(50); // Fallback score
+        expect(evaluation.feedback).toContain('Unable to parse');
+        expect(evaluation.modelUsed).toBe('test-model');
+      });
+    });
+
+    it('should handle incomplete JSON response', () => {
+      const mockResponse = `{
+        "developer": [85, "Good work"],
+        "architect": [78, "Decent design"]
+      }`;
+
+      const evaluations = gradingService['parseUnifiedEvaluationResponse'](mockResponse, 'test-model');
+
+      expect(evaluations).toHaveLength(4);
+      evaluations.forEach(evaluation => {
+        expect(evaluation.score).toBe(50); // Fallback score due to missing keys
+        expect(evaluation.feedback).toContain('Unable to parse');
+      });
+    });
+
+    it('should clamp scores to valid range in unified response', () => {
+      const mockResponse = `{
+        "developer": [150, "Excellent work"],
+        "architect": [-10, "Poor design"],
+        "sqa": [95, "Great testing"],
+        "productOwner": [200, "Amazing UX"]
+      }`;
+
+      const evaluations = gradingService['parseUnifiedEvaluationResponse'](mockResponse, 'test-model');
+
+      expect(evaluations).toHaveLength(4);
+      expect(evaluations.find(e => e.role === GradingRole.DEVELOPER)?.score).toBe(100); // Clamped to max
+      expect(evaluations.find(e => e.role === GradingRole.ARCHITECT)?.score).toBe(0); // Clamped to min
+      expect(evaluations.find(e => e.role === GradingRole.SQA)?.score).toBe(95); // Valid score
+      expect(evaluations.find(e => e.role === GradingRole.PRODUCT_OWNER)?.score).toBe(100); // Clamped to max
+    });
+  });
+
+  describe('Model Selection', () => {
+    it('should select optimal model from available models', () => {
+      const availableModels = ['basic-model', 'openai/gpt-4o-mini', 'other-model'];
+      const selectedModel = gradingService['selectOptimalModel'](availableModels);
+
+      expect(selectedModel).toBe('openai/gpt-4o-mini'); // Should prefer this model
+    });
+
+    it('should fallback to first available model if no preferred model found', () => {
+      const availableModels = ['unknown-model-1', 'unknown-model-2'];
+      const selectedModel = gradingService['selectOptimalModel'](availableModels);
+
+      expect(selectedModel).toBe('unknown-model-1');
+    });
+
+    it('should return default model if no models available', () => {
+      const selectedModel = gradingService['selectOptimalModel']([]);
+
+      expect(selectedModel).toBe('default-model');
+    });
+  });
+
+  describe('Integration Tests', () => {
+    it('should complete full unified grading workflow', async () => {
+      // Mock successful unified AI response
+      mockSendMessage.mockResolvedValue({
         success: true,
         message: {
-          content: `
-SCORE: 85
-
-FEEDBACK:
-Good implementation with room for improvement.
-
-DETAILED ANALYSIS:
-The code shows solid understanding of the requirements with proper structure and error handling.
-          `
+          content: `{
+            "developer": [85, "Good code quality with proper error handling"],
+            "architect": [78, "Solid architectural decisions with room for improvement"],
+            "sqa": [92, "Excellent attention to quality and edge cases"],
+            "productOwner": [88, "Requirements well met with good user experience"]
+          }`
         }
-      }));
+      });
 
       // Mock models endpoint
       (fetch as any).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ 
           data: [
-            { id: 'model-1' },
-            { id: 'model-2' },
-            { id: 'model-3' },
-            { id: 'model-4' }
+            { id: 'openai/gpt-4o-mini' },
+            { id: 'anthropic/claude-3-haiku' }
           ] 
         })
       });
@@ -568,8 +703,8 @@ The code shows solid understanding of the requirements with proper structure and
 
       expect(result.success).toBe(true);
       expect(result.roleEvaluations).toHaveLength(4);
-      expect(result.averageScore).toBe(85);
-      expect(result.overallFeedback).toContain('Overall Score: 85/100');
+      expect(result.averageScore).toBe(86); // (85 + 78 + 92 + 88) / 4 = 85.75, rounded to 86
+      expect(result.overallFeedback).toContain('Overall Score: 86/100');
       
       // Verify all roles were evaluated
       const roles = result.roleEvaluations.map(evaluation => evaluation.role);
@@ -578,8 +713,96 @@ The code shows solid understanding of the requirements with proper structure and
       expect(roles).toContain(GradingRole.SQA);
       expect(roles).toContain(GradingRole.PRODUCT_OWNER);
 
+      // Verify all evaluations use the same model (unified approach)
+      const models = result.roleEvaluations.map(evaluation => evaluation.modelUsed);
+      const uniqueModels = [...new Set(models)];
+      expect(uniqueModels).toHaveLength(1);
+      expect(uniqueModels[0]).toBe('openai/gpt-4o-mini');
+
       // Verify grading history was recorded
       expect(userProgressStore.userProgress?.gradingHistory).toHaveLength(1);
+    });
+
+    it('should fallback to sequential evaluation when unified approach fails', async () => {
+      // Mock unified approach failure, then successful sequential responses
+      let callCount = 0;
+      mockSendMessage.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // First call (unified) fails
+          return Promise.reject(new Error('Unified evaluation failed'));
+        } else {
+          // Subsequent calls (sequential) succeed
+          return Promise.resolve({
+            success: true,
+            message: {
+              content: `
+SCORE: 80
+
+FEEDBACK:
+Good implementation with room for improvement.
+
+DETAILED ANALYSIS:
+The code shows solid understanding with proper structure.
+              `
+            }
+          });
+        }
+      });
+
+      // Mock models endpoint
+      (fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ 
+          data: [{ id: 'test-model' }] 
+        })
+      });
+
+      const result = await gradingService.submitForGrading(
+        'test-challenge',
+        'function improvedCode() { return "fixed"; }',
+        mockChallenge,
+        'test-user'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.roleEvaluations).toHaveLength(4);
+      expect(result.averageScore).toBe(80);
+      
+      // Verify fallback to sequential evaluation occurred (multiple AI service calls)
+      expect(callCount).toBeGreaterThan(1);
+    });
+
+    it('should handle complete AI service failure gracefully', async () => {
+      // Mock complete AI service failure
+      mockSendMessage.mockRejectedValue(new Error('Complete AI service failure'));
+
+      // Mock models endpoint
+      (fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ 
+          data: [{ id: 'test-model' }] 
+        })
+      });
+
+      const result = await gradingService.submitForGrading(
+        'test-challenge',
+        'function improvedCode() { return "fixed"; }',
+        mockChallenge,
+        'test-user'
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.roleEvaluations).toHaveLength(4);
+      
+      // Should have fallback evaluations
+      const fallbackEvaluations = result.roleEvaluations.filter(evaluation => evaluation.modelUsed === 'fallback');
+      expect(fallbackEvaluations.length).toBe(4);
+      
+      fallbackEvaluations.forEach(evaluation => {
+        expect(evaluation.score).toBe(50);
+        expect(evaluation.feedback).toContain('Unable to complete');
+      });
     });
   });
 });
