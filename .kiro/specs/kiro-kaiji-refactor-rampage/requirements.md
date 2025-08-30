@@ -41,6 +41,7 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 3. WHEN a user requests unit test creation THEN Kiro AI SHALL generate appropriate test cases for the code
 4. WHEN a user needs help implementing new requirements THEN Kiro AI SHALL guide them through the implementation process
 5. WHEN a user interacts with Kiro AI THEN the system SHALL maintain context of the current challenge and code state
+6. WHEN new messages are added to the AI chat THEN the system SHALL automatically scroll the chat history to the bottom at average reading speed rather than expanding the window size
 
 ### Requirement 4
 
@@ -98,8 +99,8 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 #### Acceptance Criteria
 
 1. WHEN a user clicks "Submit Code for Grading" THEN the system SHALL evaluate the code using AI from four different role perspectives in sequence: Developer, Architect, SQA, and Product Owner
-2. WHEN the system queries /v1/models endpoint and receives one model THEN it SHALL use that single model for all four role evaluations
-3. WHEN the system queries /v1/models endpoint and receives multiple models THEN it SHALL use different models for each role (Developer uses 1st model, Architect uses 2nd model, SQA uses 3rd model, Product Owner uses 4th model, cycling if needed)
+2. WHEN the system evaluates code THEN it SHALL send the code to a single AI model and request evaluation from all four role perspectives in one request
+3. WHEN the AI model responds THEN it SHALL return a JSON object with scores and brief reasons for each role in the format: {"developer": [score, "reason"], "architect": [score, "reason"], "sqa": [score, "reason"], "productOwner": [score, "reason"]}
 4. WHEN evaluating as Developer role THEN the system SHALL provide detailed prompts focusing on code quality, best practices, maintainability, and technical implementation
 5. WHEN evaluating as Architect role THEN the system SHALL provide detailed prompts focusing on system design, scalability, patterns, and architectural decisions
 6. WHEN evaluating as SQA role THEN the system SHALL provide detailed prompts focusing on defects, edge cases, testing coverage, and quality assurance concerns

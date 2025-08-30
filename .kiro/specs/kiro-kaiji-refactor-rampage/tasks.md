@@ -82,20 +82,21 @@
   - Write comprehensive tests for evaluation accuracy
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [x] 10. Implement AI-Based Multi-Role Grading System
-  - Create AI grading service with model detection and selection logic
+- [ ] 10. Implement AI-Based Multi-Role Grading System
+  - Create AI grading service with single model approach for all role evaluations
   - Implement /v1/models endpoint querying to determine available models
-  - Build model assignment strategy for single vs multiple model scenarios
+  - Build unified prompt system that requests evaluation from all four roles in one API call
   - Create detailed grading prompts for Developer role focusing on code quality, best practices, maintainability, and technical implementation
   - Create detailed grading prompts for Architect role focusing on system design, scalability, patterns, and architectural decisions
   - Create detailed grading prompts for SQA role focusing on defects, edge cases, testing coverage, and quality assurance concerns
   - Create detailed grading prompts for Product Owner role focusing on requirement fulfillment, user experience, and business value delivery
-  - Implement sequential role evaluation system (Developer → Architect → SQA → Product Owner)
+  - Implement single API request system that sends code to one AI model and requests all four role perspectives simultaneously
+  - Build JSON response parser to extract individual role scores and feedback in format: {"developer": [score, "reason"], "architect": [score, "reason"], "sqa": [score, "reason"], "productOwner": [score, "reason"]}
   - Build score calculation and averaging system for individual role scores
   - Create grading results display component showing individual and average scores
   - Integrate grading history tracking into user progress system
   - Add "Submit Code for Grading" button and workflow to challenge interface
-  - Write comprehensive tests for AI grading service and role-based evaluation
+  - Write comprehensive tests for AI grading service and unified role-based evaluation
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
 
 - [x] 11. Implement User Progress Tracking

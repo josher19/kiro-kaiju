@@ -144,6 +144,8 @@ interface AIChatInterface {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   challengeContext: ChallengeContext;
+  autoScrollBehavior: 'smooth' | 'instant'; // Auto-scroll to bottom at reading speed
+  scrollSpeed: number; // Average reading speed for smooth scrolling
 }
 
 interface AIServiceConfig {
@@ -154,6 +156,19 @@ interface AIServiceConfig {
   requestDelay: number; // Small delay to avoid quota issues
   maxTokens: number;
   temperature: number;
+  fallbackModels: string[]; // Automatic fallback to other coding-focused models
+  errorHandling: {
+    localEndpointUnreachable: boolean;
+    remoteModelUnavailable: boolean;
+    quotaExceeded: boolean;
+  };
+}
+
+interface AICapabilities {
+  refactoringAssistance: boolean; // Provide specific code structure improvements
+  testGeneration: boolean; // Generate appropriate unit test cases
+  requirementImplementation: boolean; // Guide through implementation process
+  contextMaintenance: boolean; // Maintain challenge and code state context
 }
 ```
 
@@ -165,20 +180,38 @@ interface TeamMember {
   avatar: AnimalAvatar;
   name: string;
   specialties: string[];
+  dialogStyle: DialogStyle; // Animal-themed communication patterns
 }
 
 enum TeamRole {
-  QA = 'quality-assurance',
-  ARCHITECT = 'architect',
-  PRODUCT_OWNER = 'product-owner',
-  SENIOR_DEVELOPER = 'senior-developer'
+  QA = 'quality-assurance', // Pufferfish - defects and bugs focus
+  ARCHITECT = 'architect', // Owl - architectural advice with "Architecture" and "Redundancy"
+  PRODUCT_OWNER = 'product-owner', // Pig - requirements clarification
+  SENIOR_DEVELOPER = 'senior-developer' // Cat - coding best practices
 }
 
 enum AnimalAvatar {
-  PUFFERFISH = 'pufferfish',
-  OWL = 'owl',
-  PIG = 'pig',
-  CAT = 'cat'
+  PUFFERFISH = 'pufferfish', // Quality Assurance role
+  OWL = 'owl', // Architect role
+  PIG = 'pig', // Product Owner role
+  CAT = 'cat' // Senior Developer role
+}
+
+interface DialogStyle {
+  animalSounds: string[]; // Primary communication through animal sounds
+  keyTerms: string[]; // Technical terms interspersed in dialog
+  communicationPattern: 'mostly-sounds' | 'balanced' | 'technical-heavy';
+}
+
+interface ZoomAFriendInteraction {
+  displaySelection: boolean; // Show animal icons with role titles
+  roleSpecificAdvice: {
+    qa: 'defects-and-bugs-focused';
+    architect: 'architectural-with-owl-themes';
+    productOwner: 'requirements-clarification';
+    seniorDeveloper: 'coding-best-practices';
+  };
+  codeCommentGeneration: boolean; // Add AI-generated comments to existing code
 }
 ```
 
@@ -187,9 +220,10 @@ enum AnimalAvatar {
 interface AIGradingService {
   submitForGrading: (challengeId: string, code: string) => Promise<AIGradingResponse>;
   getAvailableModels: () => Promise<string[]>;
-  selectModelsForRoles: (availableModels: string[]) => Record<GradingRole, string>;
-  evaluateWithRole: (code: string, role: GradingRole, model: string, requirements: string[]) => Promise<RoleEvaluation>;
-  calculateAverageScore: (roleEvaluations: RoleEvaluation[]) => number;
+  selectSingleModel: (availableModels: string[]) => string;
+  evaluateAllRoles: (code: string, model: string, requirements: string[]) => Promise<AIGradingResponse>;
+  parseRoleEvaluations: (response: string) => Record<GradingRole, [number, string]>;
+  calculateAverageScore: (roleScores: Record<GradingRole, [number, string]>) => number;
   recordGradingHistory: (userId: string, gradingResult: AIGradingResponse) => Promise<void>;
 }
 
@@ -216,9 +250,15 @@ interface GradingPrompts {
   };
 }
 
-interface ModelSelectionStrategy {
-  singleModel: (model: string) => Record<GradingRole, string>;
-  multipleModels: (models: string[]) => Record<GradingRole, string>;
+interface UnifiedGradingPrompt {
+  systemPrompt: string;
+  roleInstructions: {
+    developer: string;
+    architect: string;
+    sqa: string;
+    productOwner: string;
+  };
+  responseFormat: string; // JSON format specification
   fallbackModel: string; // Default model if none available
 }
 ```
@@ -277,18 +317,16 @@ interface AIGradingRequest {
 
 interface RoleEvaluation {
   role: GradingRole;
-  modelUsed: string;
   score: number;
   feedback: string;
-  detailedAnalysis: string;
-  timestamp: Date;
 }
 
 interface AIGradingResponse {
   challengeId: string;
-  roleEvaluations: RoleEvaluation[];
+  modelUsed: string;
+  roleEvaluations: Record<GradingRole, RoleEvaluation>;
   averageScore: number;
-  overallFeedback: string;
+  rawResponse: Record<GradingRole, [number, string]>; // Format: {"developer": [score, "reason"], ...}
   gradingTimestamp: Date;
 }
 
@@ -299,11 +337,12 @@ enum GradingRole {
   PRODUCT_OWNER = 'product-owner'
 }
 
-interface GradingPromptConfig {
-  role: GradingRole;
-  focusAreas: string[];
-  evaluationCriteria: string[];
-  promptTemplate: string;
+interface UnifiedGradingRequest {
+  code: string;
+  requirements: string[];
+  model: string;
+  unifiedPrompt: string; // Single prompt requesting all four role evaluations
+  expectedFormat: string; // JSON format: {"developer": [score, "reason"], ...}
 }
 ```
 
@@ -364,11 +403,32 @@ interface GradingHistoryEntry {
 interface DialogResponse {
   teamMember: TeamMember;
   message: string;
-  animalSounds: string[];
-  keyTerms: string[];
+  animalSounds: string[]; // Majority of dialog consists of animal sounds
+  keyTerms: string[]; // Technical terms interspersed throughout
   advice: string;
   mood: 'happy' | 'concerned' | 'excited' | 'frustrated';
   codeComments?: CodeComment[]; // AI-generated code comments for existing code
+  roleSpecificFocus: RoleSpecificFocus;
+}
+
+interface RoleSpecificFocus {
+  qa: {
+    focus: 'defects-and-bugs';
+    dialogTheme: 'pufferfish-sounds-with-qa-terms';
+  };
+  architect: {
+    focus: 'architectural-advice';
+    dialogTheme: 'owl-sounds-with-architecture-and-redundancy';
+    keyWords: ['Architecture', 'Redundancy'];
+  };
+  productOwner: {
+    focus: 'requirements-clarification';
+    dialogTheme: 'pig-sounds-with-product-terms';
+  };
+  seniorDeveloper: {
+    focus: 'coding-best-practices';
+    dialogTheme: 'cat-sounds-with-development-terms';
+  };
 }
 
 interface CodeComment {
@@ -382,6 +442,7 @@ interface ZoomAFriendService {
   generateRoleBasedAdvice: (code: string, role: TeamRole) => Promise<DialogResponse>;
   addCodeComments: (code: string, comments: CodeComment[]) => string;
   getAIDialogForRole: (role: TeamRole, context: ChallengeContext) => Promise<string>;
+  createAnimalThemedDialog: (role: TeamRole, technicalContent: string) => string;
 }
 ```
 
