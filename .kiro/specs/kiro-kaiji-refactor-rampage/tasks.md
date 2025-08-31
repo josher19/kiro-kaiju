@@ -149,20 +149,15 @@
   - _Requirements: 9.2, 9.3, 9.4, 9.6_
 
 - [x] 16. Fix Build Process and Ensure Test Suite Passes
-  - DONE: Resolve all TypeScript compilation errors and type issues
-  - DONE: Fix Vite build configuration and dependency conflicts
-  - DONE: Address Monaco Editor bundle size and import issues
-  - DONE: Resolve Tailwind CSS configuration and PostCSS setup problems
-  - Fix any ESLint and Prettier configuration conflicts
-  - DONE: Should e2e tests be run via `npm run test` (vitest) or `npm run test:e2e' (playwright)
-  - DONE: Check if `npm run test` is running anything it should not
-  - Ensure ALL unit tests pass without errors or warnings
-  - If there are any errors, fix the test or fix the code until there are no more errors
-  - SKIP: Verify E2E tests run successfully across all test scenarios
-  - DONE: Clean up unused dependencies and optimize package.json
-  - DONE: Validate build output and ensure proper asset generation
+  - Fix TypeScript compilation errors in cloudService.ts (type-only imports)
+  - Resolve failing unit tests in components and services
+  - Fix E2E test configuration issues with Playwright
+  - Address test assertion failures in AIChatInterface, ChallengeSelector, GradingResults, and ZoomAFriendPanel components
+  - Fix service test failures in aiService, aiGradingService, challengeService, and localEvaluationService
+  - Ensure all unit tests pass without errors or warnings
+  - Verify build process completes successfully
   - Test development server stability and hot reload functionality
-  - Commit changes (one line description) after all this task is complete via git commit
+  - Commit changes after all tests pass
   - _Requirements: All requirements depend on a stable build process_
 
 - [x] 17. Implement AWS Cloud Mode Services
@@ -188,7 +183,18 @@
   - Write tests for error scenarios and offline functionality
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 19. Optimize Performance and Accessibility
+- [x] 19. Implement Visual Display System
+  - Create visual display component positioned in left sidebar between Progress link and Deployment Mode chooser
+  - Implement Kaiju image display when challenge is first selected (from src/assets/images/kaiju/)
+  - Implement team member image display when Zoom-a-Friend is clicked (from src/assets/images/team/${TeamRole}_sm.png)
+  - Add smooth image transitions between Kaiju and team member images
+  - Ensure responsive image sizing for different screen sizes
+  - Integrate with challenge selection to show appropriate Kaiju monster image
+  - Integrate with Zoom-a-Friend panel to show selected team member image
+  - Write tests for image display logic and transitions
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4, 4.5_
+
+- [ ] 20. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -197,7 +203,7 @@
   - Write performance tests and accessibility audits
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 20. Create End-to-End Testing Suite
+- [x] 21. Create End-to-End Testing Suite
   - Write E2E tests for complete challenge workflow
   - Test mobile responsiveness across different devices
   - Verify AI integration and Zoom-a-Friend functionality

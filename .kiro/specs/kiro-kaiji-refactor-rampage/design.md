@@ -77,7 +77,7 @@ graph TB
 #### Local LLM Configuration (Requirement 9.1, 9.5)
 ```typescript
 interface LocalLLMConfig {
-  defaultEndpoint: 'http://localhost:1234/v1';
+  defaultEndpoint: 'http://localhost:1234/v1'; // OpenAI-compatible endpoint default (Requirement 9.1)
   connectionTimeout: number;
   retryAttempts: number;
   fallbackBehavior: 'error-message' | 'switch-to-remote' | 'offline-mode';
@@ -86,29 +86,34 @@ interface LocalLLMConfig {
     interval: number;
     failureThreshold: number;
   };
+  errorHandling: {
+    unreachableEndpoint: boolean; // Clear error messages when local LLM endpoint is unreachable (Requirement 9.5)
+    fallbackOptions: string[]; // Provide fallback options when local endpoint fails (Requirement 9.5)
+  };
 }
 ```
 
 #### Remote LLM Configuration (Requirement 9.2, 9.4, 9.6)
 ```typescript
 interface RemoteLLMConfig {
-  provider: 'openrouter';
-  preferredModels: ['openai/gpt-oss-20b', 'claude-3-haiku', 'coding-focused-models'];
+  provider: 'openrouter'; // OpenRouter API usage (Requirement 9.2)
+  preferredModels: ['openai/gpt-oss-20b', 'claude-3-haiku', 'coding-focused-models']; // Preferred models including openai/gpt-oss-20b and Claude (Requirement 9.2)
   fallbackStrategy: {
-    automaticFallback: boolean;
-    fallbackOrder: string[];
-    costOptimization: 'free-tier-priority' | 'performance-priority';
+    automaticFallback: boolean; // Automatic fallback to other coding-focused models when preferred unavailable (Requirement 9.4)
+    fallbackOrder: string[]; // Ordered list of fallback coding-focused models (Requirement 9.4)
+    costOptimization: 'free-tier-priority' | 'performance-priority'; // Optimize for free tier usage (Requirement 9.6)
   };
   rateLimiting: {
-    requestDelay: number; // Small delay to avoid quotas (Requirement 9.3)
+    requestDelay: number; // Small delay to avoid hitting quotas (Requirement 9.3)
     quotaManagement: boolean;
     costTracking: boolean;
+    costAwareModelSelection: boolean; // Cost-aware model selection for free tier (Requirement 9.6)
   };
 }
 ```
 
-#### AI Provider Abstraction Layer
-The system implements a unified interface that abstracts the differences between AI providers:
+#### AI Provider Abstraction Layer (Requirement 9)
+The system implements a unified interface that abstracts the differences between AI providers to support flexible AI provider options:
 
 ```typescript
 interface AIProviderInterface {
@@ -117,6 +122,7 @@ interface AIProviderInterface {
   sendRequest: (prompt: string, options: RequestOptions) => Promise<string>;
   getAvailableModels: () => Promise<string[]>;
   handleError: (error: AIProviderError) => AIProviderResponse;
+  implementRequestDelay: () => Promise<void>; // Small delay to avoid hitting quotas (Requirement 9.3)
 }
 
 interface AIProviderError {
@@ -124,6 +130,7 @@ interface AIProviderError {
   provider: string;
   originalError: Error;
   fallbackOptions: string[];
+  isLocalEndpointUnreachable?: boolean; // Specific handling for local LLM connection issues (Requirement 9.5)
 }
 ```
 
@@ -135,7 +142,7 @@ interface AIProviderError {
 ```typescript
 interface ChallengeConfig {
   language: ProgrammingLanguage;
-  framework?: Framework;
+  framework?: Framework; // Optional front-end framework selection
   category: ChallengeCategory;
   difficulty: DifficultyLevel;
 }
@@ -144,12 +151,19 @@ interface ChallengeSelector {
   onConfigChange: (config: ChallengeConfig) => void;
   onGenerateChallenge: () => void;
   isLoading: boolean;
-  activeChallenges: Challenge[]; // Support multiple active challenges
+  activeChallenges: Challenge[]; // Support multiple active challenges simultaneously
+  frameworkOptions: Framework[]; // Dynamic framework options based on selected language
+  isGenerateEnabled: boolean; // Button state management based on required parameter selection
 }
 
 interface ChallengeTransition {
-  smoothTransition: boolean; // Ensure smooth transition to challenge
-  autoOpen: boolean; // Automatically open challenge after generation
+  smoothTransition: boolean; // Ensure smooth transition to challenge after generation
+  autoOpen: boolean; // Automatically open challenge after generation (Requirement 1.4)
+}
+
+interface FrameworkFiltering {
+  updateFrameworkOptions: (language: ProgrammingLanguage) => Framework[];
+  validateRequiredParameters: (config: ChallengeConfig) => boolean;
 }
 ```
 
@@ -159,7 +173,7 @@ interface KaijuMonster {
   id: string;
   name: string;
   description: string;
-  avatar: string;
+  avatar: string; // Image path from src/assets/images/kaiju/ directory
   codePatterns: CodeAntiPattern[];
   difficultyModifiers: DifficultyModifier[];
 }
@@ -170,6 +184,14 @@ enum KaijuType {
   DUPLICATRON = 'duplicatron',
   SPAGHETTIZILLA = 'spaghettizilla',
   MEMORYLEAK_ODACTYL = 'memoryleak-odactyl'
+}
+
+interface KaijuImageMapping {
+  'hydra-bug': 'src/assets/images/kaiju/HydraBug_small.png';
+  'complexasaur': 'src/assets/images/kaiju/Complexosaur_small.png';
+  'duplicatron': 'src/assets/images/kaiju/Duplicatron_small.png';
+  'spaghettizilla': 'src/assets/images/kaiju/Speghettizilla_small.png';
+  'memoryleak-odactyl': 'src/assets/images/kaiju/MemoryLeakodactyl_small.png';
 }
 ```
 
@@ -236,13 +258,14 @@ interface TeamMember {
   name: string;
   specialties: string[];
   dialogStyle: DialogStyle; // Animal-themed communication patterns
+  imagePath: string; // Image path from src/assets/images/team/ directory
 }
 
 enum TeamRole {
-  QA = 'quality-assurance', // Pufferfish - defects and bugs focus
-  ARCHITECT = 'architect', // Owl - architectural advice with "Architecture" and "Redundancy"
-  PRODUCT_OWNER = 'product-owner', // Pig - requirements clarification
-  SENIOR_DEVELOPER = 'senior-developer' // Cat - coding best practices
+  QA = 'quality-assurance', // Pufferfish - defects and bugs focus (Requirement 4.2)
+  ARCHITECT = 'architect', // Owl - architectural advice with "Architecture" and "Redundancy" (Requirement 4.3)
+  PRODUCT_OWNER = 'product-owner', // Pig - requirements clarification (Requirement 4.4)
+  SENIOR_DEVELOPER = 'senior-developer' // Cat - coding best practices (Requirement 4.5)
 }
 
 enum AnimalAvatar {
@@ -252,55 +275,96 @@ enum AnimalAvatar {
   CAT = 'cat' // Senior Developer role
 }
 
+interface TeamMemberImageMapping {
+  'quality-assurance': 'src/assets/images/team/quality-assurance_sm.png';
+  'architect': 'src/assets/images/team/architect_sm.png';
+  'product-owner': 'src/assets/images/team/product-owner_sm.png';
+  'senior-developer': 'src/assets/images/team/senior-developer_sm.png';
+}
+
 interface DialogStyle {
-  animalSounds: string[]; // Primary communication through animal sounds
-  keyTerms: string[]; // Technical terms interspersed in dialog
+  animalSounds: string[]; // Primary communication through animal sounds (Requirement 4.6)
+  keyTerms: string[]; // Technical terms interspersed in dialog (Requirement 4.6)
   communicationPattern: 'mostly-sounds' | 'balanced' | 'technical-heavy';
+  specialKeywords?: string[]; // Role-specific keywords (e.g., "Architecture", "Redundancy" for Owl)
 }
 
 interface ZoomAFriendInteraction {
-  displaySelection: boolean; // Show animal icons with role titles
+  displaySelection: boolean; // Show animal icons with role titles underneath (Requirement 4.1)
   roleSpecificAdvice: {
-    qa: 'defects-and-bugs-focused';
-    architect: 'architectural-with-owl-themes';
-    productOwner: 'requirements-clarification';
-    seniorDeveloper: 'coding-best-practices';
+    qa: 'defects-and-bugs-focused'; // Pufferfish AI dialog (Requirement 4.2)
+    architect: 'architectural-with-owl-themes'; // Owl-themed AI dialog (Requirement 4.3)
+    productOwner: 'requirements-clarification'; // AI Product Owner dialog (Requirement 4.4)
+    seniorDeveloper: 'coding-best-practices'; // Software Development AI themed dialog (Requirement 4.5)
   };
   codeCommentGeneration: boolean; // Add AI-generated comments to existing code
 }
 ```
 
-#### 6. AI Grading Service
+#### 6. Visual Display Component
+```typescript
+interface VisualDisplayComponent {
+  currentImage: string;
+  displayType: 'kaiju' | 'team-member';
+  position: 'left-sidebar'; // Between Progress link and Deployment Mode chooser
+  imageTransition: 'smooth' | 'instant';
+}
+
+interface KaijuDisplay {
+  showKaijuImage: (kaijuType: KaijuType) => void;
+  kaijuImagePath: string; // From src/assets/images/kaiju/ directory
+  displayOnChallengeSelection: boolean; // Show Kaiju image when challenge is first selected
+}
+
+interface TeamMemberDisplay {
+  showTeamMemberImage: (teamRole: TeamRole) => void;
+  teamMemberImagePath: string; // From src/assets/images/team/${TeamRole}_sm.png
+  displayOnZoomAFriendClick: boolean; // Show team member image when Zoom-a-Friend is clicked
+  replaceKaijuImage: boolean; // Replace Kaiju image with team member image
+}
+
+interface ImageDisplayLogic {
+  defaultState: 'no-image' | 'placeholder';
+  challengeSelectedState: 'show-kaiju-image';
+  zoomAFriendClickedState: 'show-team-member-image';
+  imageSourceMapping: {
+    kaiju: KaijuImageMapping;
+    teamMember: TeamMemberImageMapping;
+  };
+}
+```
+
+#### 7. AI Grading Service
 ```typescript
 interface AIGradingService {
-  submitForGrading: (challengeId: string, code: string) => Promise<AIGradingResponse>;
+  submitForGrading: (challengeId: string, code: string) => Promise<AIGradingResponse>; // "Submit Code for Grading" button workflow (Requirement 8.1)
   getAvailableModels: () => Promise<string[]>;
   selectSingleModel: (availableModels: string[]) => string;
-  evaluateAllRoles: (code: string, model: string, requirements: string[]) => Promise<AIGradingResponse>;
-  parseRoleEvaluations: (response: string) => Record<GradingRole, [number, string]>;
-  calculateAverageScore: (roleScores: Record<GradingRole, [number, string]>) => number;
-  recordGradingHistory: (userId: string, gradingResult: AIGradingResponse) => Promise<void>;
+  evaluateAllRoles: (code: string, model: string, requirements: string[]) => Promise<AIGradingResponse>; // Single AI model for all four role perspectives (Requirement 8.2)
+  parseRoleEvaluations: (response: string) => Record<GradingRole, [number, string]>; // Parse JSON response format (Requirement 8.3)
+  calculateAverageScore: (roleScores: Record<GradingRole, [number, string]>) => number; // Calculate average overall score (Requirement 8.8)
+  recordGradingHistory: (userId: string, gradingResult: AIGradingResponse) => Promise<void>; // Record scores in Progress page (Requirement 8.9)
 }
 
 interface GradingPrompts {
   [GradingRole.DEVELOPER]: {
     systemPrompt: string;
-    focusAreas: ['code quality', 'best practices', 'maintainability', 'technical implementation'];
+    focusAreas: ['code quality', 'best practices', 'maintainability', 'technical implementation']; // Requirement 8.4
     evaluationCriteria: ['clean code principles', 'SOLID principles', 'error handling', 'performance'];
   };
   [GradingRole.ARCHITECT]: {
     systemPrompt: string;
-    focusAreas: ['system design', 'scalability', 'patterns', 'architectural decisions'];
+    focusAreas: ['system design', 'scalability', 'patterns', 'architectural decisions']; // Requirement 8.5
     evaluationCriteria: ['design patterns', 'separation of concerns', 'modularity', 'extensibility'];
   };
   [GradingRole.SQA]: {
     systemPrompt: string;
-    focusAreas: ['defects', 'edge cases', 'testing coverage', 'quality assurance'];
+    focusAreas: ['defects', 'edge cases', 'testing coverage', 'quality assurance']; // Requirement 8.6
     evaluationCriteria: ['bug detection', 'test completeness', 'edge case handling', 'validation'];
   };
   [GradingRole.PRODUCT_OWNER]: {
     systemPrompt: string;
-    focusAreas: ['requirement fulfillment', 'user experience', 'business value'];
+    focusAreas: ['requirement fulfillment', 'user experience', 'business value']; // Requirement 8.7
     evaluationCriteria: ['requirement compliance', 'usability', 'feature completeness', 'user value'];
   };
 }
@@ -308,12 +372,12 @@ interface GradingPrompts {
 interface UnifiedGradingPrompt {
   systemPrompt: string;
   roleInstructions: {
-    developer: string;
-    architect: string;
-    sqa: string;
-    productOwner: string;
+    developer: string; // Detailed prompts for code quality, best practices, maintainability, technical implementation (Requirement 8.4)
+    architect: string; // Detailed prompts for system design, scalability, patterns, architectural decisions (Requirement 8.5)
+    sqa: string; // Detailed prompts for defects, edge cases, testing coverage, quality assurance (Requirement 8.6)
+    productOwner: string; // Detailed prompts for requirement fulfillment, user experience, business value (Requirement 8.7)
   };
-  responseFormat: string; // JSON format specification
+  responseFormat: string; // JSON format: {"developer": [score, "reason"], "architect": [score, "reason"], "sqa": [score, "reason"], "productOwner": [score, "reason"]} (Requirement 8.3)
   fallbackModel: string; // Default model if none available
 }
 ```
@@ -350,13 +414,13 @@ interface EvaluationRequest {
 
 interface EvaluationResponse {
   scores: {
-    readability: number;
-    quality: number;
-    defects: number;
-    requirements: number;
+    readability: number; // Code readability using automated metrics (Requirement 5.1)
+    quality: number; // Code quality including maintainability and best practices (Requirement 5.2)
+    defects: number; // Defects and bugs through automated testing (Requirement 5.3)
+    requirements: number; // Verification that all new requirements are implemented (Requirement 5.4)
     overall: number;
   };
-  feedback: EvaluationFeedback[];
+  feedback: EvaluationFeedback[]; // Detailed score breakdown with specific feedback for improvement (Requirement 5.5)
   achievements?: Achievement[];
 }
 ```
@@ -448,32 +512,37 @@ interface GradingWorkflow {
 
 ### Role-Specific Evaluation Criteria
 
-#### Developer Role Evaluation
+#### Developer Role Evaluation (Requirement 8.4)
 - **Focus Areas**: Code quality, best practices, maintainability, technical implementation
 - **Evaluation Criteria**: Clean code principles, SOLID principles, error handling, performance
 - **Scoring Weight**: Equal weight with other roles in average calculation
+- **Prompt Focus**: Detailed evaluation of technical implementation and coding standards
 
-#### Architect Role Evaluation  
+#### Architect Role Evaluation (Requirement 8.5)
 - **Focus Areas**: System design, scalability, patterns, architectural decisions
 - **Evaluation Criteria**: Design patterns, separation of concerns, modularity, extensibility
 - **Scoring Weight**: Equal weight with other roles in average calculation
+- **Prompt Focus**: Detailed evaluation of architectural soundness and design patterns
 
-#### SQA Role Evaluation
+#### SQA Role Evaluation (Requirement 8.6)
 - **Focus Areas**: Defects, edge cases, testing coverage, quality assurance concerns
 - **Evaluation Criteria**: Bug detection, test completeness, edge case handling, validation
 - **Scoring Weight**: Equal weight with other roles in average calculation
+- **Prompt Focus**: Detailed evaluation of quality assurance and defect identification
 
-#### Product Owner Role Evaluation
+#### Product Owner Role Evaluation (Requirement 8.7)
 - **Focus Areas**: Requirement fulfillment, user experience, business value delivery
 - **Evaluation Criteria**: Requirement compliance, usability, feature completeness, user value
 - **Scoring Weight**: Equal weight with other roles in average calculation
+- **Prompt Focus**: Detailed evaluation of business value and requirement satisfaction
 
-### Progress Tracking Integration
+### Progress Tracking Integration (Requirement 8.9)
 The grading system integrates with the user progress tracking to provide:
 - Historical trend analysis across all role perspectives
-- Individual role improvement tracking over time
+- Individual role improvement tracking over time (recorded in user's Progress page)
 - Average score progression for overall skill development
 - Challenge-specific performance patterns by Kaiju type
+- Persistent storage of individual role scores and average scores for long-term tracking
 
 ## Data Models
 
@@ -503,28 +572,39 @@ interface Requirement {
 interface UserProgress {
   userId: string;
   completedChallenges: string[];
-  achievements: Achievement[];
+  achievements: Achievement[]; // Achievement badges for defeating specific Kaiju types (Requirement 7.4)
   stats: {
-    totalChallenges: number;
-    averageScore: number;
-    kaijuDefeated: Record<KaijuType, number>;
-    improvementTrend: number[];
+    totalChallenges: number; // Statistics on challenges completed (Requirement 7.3)
+    averageScore: number; // Average scores tracking (Requirement 7.3)
+    kaijuDefeated: Record<KaijuType, number>; // Track Kaiju defeats for achievement system (Requirement 7.4)
+    improvementTrend: number[]; // Improvement trends display (Requirement 7.3)
   };
-  unlockedDifficulties: DifficultyLevel[];
+  unlockedDifficulties: DifficultyLevel[]; // Unlock higher difficulty levels based on high scores (Requirement 7.2)
   gradingHistory: GradingHistoryEntry[]; // Track AI grading results over time
-  createdAt: Date;
+  milestones: Milestone[]; // Milestone tracking with encouraging feedback (Requirement 7.5)
+  createdAt: Date; // Progress profile creation on first challenge completion (Requirement 7.1)
   updatedAt: Date;
+}
+
+interface Milestone {
+  id: string;
+  name: string;
+  description: string;
+  achieved: boolean;
+  achievedAt?: Date;
+  encouragingFeedback: string; // Encouraging feedback when milestones are reached (Requirement 7.5)
+  unlocksSpecialChallenges?: string[]; // Special challenges unlocked by milestones (Requirement 7.5)
 }
 
 interface GradingHistoryEntry {
   challengeId: string;
   gradingTimestamp: Date;
-  roleScores: Record<GradingRole, number>; // Individual scores from each role perspective
-  averageScore: number; // Calculated average of all role scores
-  modelUsed: string; // Single AI model used for unified evaluation
+  roleScores: Record<GradingRole, number>; // Individual scores from each role perspective (Requirement 8.8, 8.9)
+  averageScore: number; // Calculated average of all role scores (Requirement 8.8, 8.9)
+  modelUsed: string; // Single AI model used for unified evaluation (Requirement 8.2)
   challengeType: string;
   kaijuType: KaijuType;
-  rawResponse: Record<GradingRole, [number, string]>; // Original AI response format
+  rawResponse: Record<GradingRole, [number, string]>; // Original AI response format: {"developer": [score, "reason"], ...} (Requirement 8.3)
 }
 ```
 
@@ -666,16 +746,24 @@ class ErrorHandler {
 - Tablet: 768px - 1024px  
 - Desktop: 1024px+
 
+### Visual Display System
+- **Left Sidebar Image Display**: Small image positioned between Progress link and Deployment Mode chooser
+- **Kaiju Image Display**: Show Kaiju monster image when challenge is first selected (from src/assets/images/kaiju/)
+- **Team Member Image Display**: Replace Kaiju image with team member image when Zoom-a-Friend is clicked (from src/assets/images/team/${TeamRole}_sm.png)
+- **Smooth Image Transitions**: Seamless switching between Kaiju and team member images
+- **Responsive Image Sizing**: Appropriate image scaling for different screen sizes
+
 ### Mobile-Specific Features
-- Touch-optimized code editor with zoom controls and horizontal scrolling (Requirement 6.2)
-- Collapsible panels for AI chat and Zoom-a-Friend with touch-friendly controls (Requirement 6.3, 6.4)
+- **Touch-Optimized Interface**: Responsive interface optimized for touch interaction (Requirement 6.1)
+- **Code Editor Mobile Support**: Touch-optimized code editor with horizontal scrolling and appropriate text sizing (Requirement 6.2)
+- **AI Chat Mobile Usability**: AI chat interface maintains full functionality with touch-friendly controls on mobile devices (Requirement 6.3)
+- **Zoom-a-Friend Mobile Optimization**: Avatar interface optimized for smaller screens with touch-friendly selection (Requirement 6.4)
+- **Functionality Parity**: Same functionality between mobile and desktop users for code submission and all features (Requirement 6.5)
+- **Visual Display Mobile Adaptation**: Left sidebar image display adapts appropriately for mobile layouts
 - Swipe gestures for navigation between sections
 - Optimized virtual keyboard handling for code input
 - Reduced animation complexity for better performance
-- AI chat interface maintains full functionality on mobile devices (Requirement 6.3)
-- Zoom-a-Friend avatar interface optimized for smaller screens (Requirement 6.4)
-- Responsive interface optimized for touch interaction (Requirement 6.1)
-- Same functionality parity between mobile and desktop users (Requirement 6.5)
+- Collapsible panels for space optimization on smaller screens
 
 ### Progressive Enhancement
 - Core functionality works without JavaScript
