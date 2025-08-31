@@ -388,6 +388,12 @@
         />
       </div>
     </div>
+    
+    <!-- Achievement Notification -->
+    <AchievementNotification
+      :achievement="currentAchievement"
+      @close="handleAchievementClose"
+    />
   </div>
 </template>
 
@@ -404,6 +410,7 @@ import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import ProgressTracker from '@/components/progress/ProgressTracker.vue'
 import GradingResults from '@/components/challenge/GradingResults.vue'
 import VisualDisplay from '@/components/common/VisualDisplay.vue'
+import AchievementNotification from '@/components/progress/AchievementNotification.vue'
 import type { Challenge, ChallengeContext } from '@/types'
 import type { AIGradingResponse } from '@/types/api'
 import { ProgrammingLanguage } from '@/types'
@@ -436,6 +443,7 @@ const userId = ref('demo-user')
 const isGradingInProgress = ref(false)
 const gradingResults = ref<AIGradingResponse | null>(null)
 const showGradingResults = ref(false)
+const currentAchievement = ref<any>(null)
 
 // Navigation configuration
 const navigationViews = [
@@ -546,10 +554,31 @@ const handleSubmitForGrading = async () => {
     )
 
     if (result.success) {
+      // Process grading results in user progress store
+      const progressResult = await progressStore.processGradingResults(result)
+      
+      if (progressResult) {
+        // Update challenge completion stats
+        progressStore.updateKaijuDefeated(currentChallenge.value.kaiju.type)
+        progressStore.updateCategoryCompleted(currentChallenge.value.config.category)
+        
+        // Show any new achievements
+        if (progressResult.newAchievements.length > 0) {
+          console.log('New achievements unlocked:', progressResult.newAchievements)
+          // Show the first new achievement in notification
+          currentAchievement.value = progressResult.newAchievements[0]
+        }
+        
+        // Show encouragement messages
+        if (progressResult.encouragements.length > 0) {
+          console.log('Encouragement:', progressResult.encouragements)
+        }
+      }
+      
       // Store grading results and show modal
       gradingResults.value = result
       showGradingResults.value = true
-      console.log('Grading completed:', result)
+      console.log('Grading completed successfully:', result)
     } else {
       appStore.setError(result.error || 'Failed to grade code')
     }
@@ -566,13 +595,20 @@ const handleSaveGradingToHistory = () => {
   // The grading service already saves to history automatically
   // This is just for user feedback
   showGradingResults.value = false
-  appStore.setError('Grading results saved to your progress history!')
+  
+  // Show success message instead of error
+  appStore.setLoading(false)
+  console.log('Grading results saved to your progress history!')
 }
 
 const handleViewGradingHistory = () => {
   // Navigate to progress view to see grading history
   showGradingResults.value = false
   navigateToView('progress')
+}
+
+const handleAchievementClose = () => {
+  currentAchievement.value = null
 }
 
 const handleResize = () => {

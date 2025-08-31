@@ -419,6 +419,69 @@ export const useUserProgressStore = defineStore('userProgress', () => {
     await saveProgress();
   };
 
+  const processGradingResults = async (gradingResponse: any) => {
+    if (!userProgress.value || !gradingResponse.success) return null;
+
+    try {
+      // Create grading history entry
+      const historyEntry: GradingHistoryEntry = {
+        challengeId: gradingResponse.challengeId,
+        gradingTimestamp: new Date(gradingResponse.gradingTimestamp),
+        roleScores: {},
+        averageScore: gradingResponse.averageScore,
+        modelsUsed: [gradingResponse.roleEvaluations[0]?.modelUsed || 'unknown'],
+        challengeType: 'refactoring', // Default type
+        kaijuType: 'unknown' // Will be updated by caller
+      };
+
+      // Extract role scores from evaluations
+      gradingResponse.roleEvaluations.forEach((evaluation: any) => {
+        historyEntry.roleScores[evaluation.role] = evaluation.score;
+      });
+
+      // Add to grading history
+      await addGradingHistoryEntry(historyEntry);
+
+      // Update improvement trend with average score
+      userProgress.value.stats.improvementTrend.push(gradingResponse.averageScore);
+      if (userProgress.value.stats.improvementTrend.length > 10) {
+        userProgress.value.stats.improvementTrend.shift();
+      }
+
+      // Update average score
+      const totalGradings = userProgress.value.gradingHistory.length;
+      if (totalGradings > 0) {
+        const totalScore = userProgress.value.gradingHistory.reduce((sum, entry) => sum + entry.averageScore, 0);
+        userProgress.value.stats.averageScore = totalScore / totalGradings;
+      }
+
+      // Update best score if this is better
+      if (gradingResponse.averageScore > userProgress.value.stats.bestScore) {
+        userProgress.value.stats.bestScore = gradingResponse.averageScore;
+      }
+
+      // Check for new achievements based on grading results
+      const newAchievements = checkForNewAchievements();
+      if (newAchievements.length > 0) {
+        userProgress.value.achievements.push(...newAchievements);
+      }
+
+      // Check for difficulty unlocks
+      checkDifficultyUnlocks();
+
+      await saveProgress();
+
+      return {
+        historyEntry,
+        newAchievements,
+        encouragements: getMilestoneEncouragement(userProgress.value.stats.challengesCompleted)
+      };
+    } catch (error) {
+      console.error('Failed to process grading results:', error);
+      return null;
+    }
+  };
+
   const resetProgress = async () => {
     if (!userProgress.value) return;
     
@@ -465,6 +528,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
     updateCategoryCompleted,
     updatePreferences,
     addGradingHistoryEntry,
+    processGradingResults,
     resetProgress
   };
 });

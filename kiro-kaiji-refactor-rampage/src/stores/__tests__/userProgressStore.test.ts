@@ -513,4 +513,160 @@ describe('User Progress Store', () => {
       expect(store.userProgress?.username).toBe('testuser');
     });
   });
+
+  describe('Grading Results Processing', () => {
+    it('should process successful grading results', async () => {
+      const store = useUserProgressStore();
+      store.initializeProgress('user123');
+
+      const mockGradingResponse = {
+        success: true,
+        challengeId: 'challenge1',
+        roleEvaluations: [
+          {
+            role: 'developer',
+            modelUsed: 'test-model',
+            score: 85,
+            feedback: 'Good code quality',
+            detailedAnalysis: 'Detailed analysis',
+            focusAreas: ['code quality'],
+            timestamp: new Date()
+          },
+          {
+            role: 'architect',
+            modelUsed: 'test-model',
+            score: 80,
+            feedback: 'Good architecture',
+            detailedAnalysis: 'Detailed analysis',
+            focusAreas: ['architecture'],
+            timestamp: new Date()
+          }
+        ],
+        averageScore: 82.5,
+        overallFeedback: 'Good work overall',
+        gradingTimestamp: new Date()
+      };
+
+      const result = await store.processGradingResults(mockGradingResponse);
+
+      expect(result).not.toBeNull();
+      expect(result?.historyEntry.averageScore).toBe(82.5);
+      expect(store.userProgress?.gradingHistory).toHaveLength(1);
+      expect(store.userProgress?.stats.improvementTrend).toContain(82.5);
+      expect(store.userProgress?.stats.averageScore).toBe(82.5);
+      expect(store.userProgress?.stats.bestScore).toBe(82.5);
+    });
+
+    it('should handle failed grading results', async () => {
+      const store = useUserProgressStore();
+      store.initializeProgress('user123');
+
+      const mockGradingResponse = {
+        success: false,
+        error: 'Grading failed'
+      };
+
+      const result = await store.processGradingResults(mockGradingResponse);
+
+      expect(result).toBeNull();
+      expect(store.userProgress?.gradingHistory).toHaveLength(0);
+    });
+
+    it('should update best score when new score is higher', async () => {
+      const store = useUserProgressStore();
+      store.initializeProgress('user123');
+
+      // Set initial best score
+      if (store.userProgress) {
+        store.userProgress.stats.bestScore = 75;
+      }
+
+      const mockGradingResponse = {
+        success: true,
+        challengeId: 'challenge1',
+        roleEvaluations: [
+          {
+            role: 'developer',
+            modelUsed: 'test-model',
+            score: 90,
+            feedback: 'Excellent code',
+            detailedAnalysis: 'Detailed analysis',
+            focusAreas: ['code quality'],
+            timestamp: new Date()
+          }
+        ],
+        averageScore: 90,
+        overallFeedback: 'Excellent work',
+        gradingTimestamp: new Date()
+      };
+
+      await store.processGradingResults(mockGradingResponse);
+
+      expect(store.userProgress?.stats.bestScore).toBe(90);
+    });
+
+    it('should not update best score when new score is lower', async () => {
+      const store = useUserProgressStore();
+      store.initializeProgress('user123');
+
+      // Set initial best score
+      if (store.userProgress) {
+        store.userProgress.stats.bestScore = 95;
+      }
+
+      const mockGradingResponse = {
+        success: true,
+        challengeId: 'challenge1',
+        roleEvaluations: [
+          {
+            role: 'developer',
+            modelUsed: 'test-model',
+            score: 80,
+            feedback: 'Good code',
+            detailedAnalysis: 'Detailed analysis',
+            focusAreas: ['code quality'],
+            timestamp: new Date()
+          }
+        ],
+        averageScore: 80,
+        overallFeedback: 'Good work',
+        gradingTimestamp: new Date()
+      };
+
+      await store.processGradingResults(mockGradingResponse);
+
+      expect(store.userProgress?.stats.bestScore).toBe(95);
+    });
+
+    it('should limit grading history to 50 entries', async () => {
+      const store = useUserProgressStore();
+      store.initializeProgress('user123');
+
+      // Add 52 grading entries
+      for (let i = 0; i < 52; i++) {
+        const mockGradingResponse = {
+          success: true,
+          challengeId: `challenge${i}`,
+          roleEvaluations: [
+            {
+              role: 'developer',
+              modelUsed: 'test-model',
+              score: 80,
+              feedback: 'Good code',
+              detailedAnalysis: 'Detailed analysis',
+              focusAreas: ['code quality'],
+              timestamp: new Date()
+            }
+          ],
+          averageScore: 80,
+          overallFeedback: 'Good work',
+          gradingTimestamp: new Date()
+        };
+
+        await store.processGradingResults(mockGradingResponse);
+      }
+
+      expect(store.userProgress?.gradingHistory).toHaveLength(50);
+    });
+  });
 });
