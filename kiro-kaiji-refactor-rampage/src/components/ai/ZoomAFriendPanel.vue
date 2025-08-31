@@ -144,6 +144,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAppStore } from '@/stores/appStore'
 import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
 import type { TeamMember, DialogResponse, ZoomSession, DialogContext, CodeComment } from '@/types/team'
 import { getZoomAFriendService } from '@/services/zoomAFriendService'
@@ -164,6 +166,9 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// Store
+const appStore = useAppStore()
 
 const activeSession = ref<ZoomSession | null>(null)
 const userInput = ref('')
@@ -199,6 +204,9 @@ const selectTeamMember = async (member: TeamMember) => {
   isLoading.value = true
   
   try {
+    // Set selected team member in app store for visual display
+    appStore.setSelectedTeamMember(member.role)
+    
     // Create new session
     const session: ZoomSession = {
       id: `session-${Date.now()}`,
@@ -251,6 +259,9 @@ const endSession = () => {
     activeSession.value.isActive = false
     emit('session-ended', activeSession.value)
     activeSession.value = null
+    
+    // Clear selected team member from visual display
+    appStore.clearSelectedTeamMember()
   }
 }
 

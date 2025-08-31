@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": ["src/**/*.ts", "src/**/__tests__/*.test.ts", "env.d.ts"],
+  "exclude": [],
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "composite": true,
+    "types": ["node", "jest"]
+  }
+}

@@ -13,6 +13,7 @@ import {
   defaultKiroConfig,
   type KiroIntegrationConfig 
 } from '@/services/kiroIntegrationService';
+import type { TeamRole } from '@/types/team';
 
 export type Theme = 'light' | 'dark' | 'auto';
 export type ViewType = 'challenges' | 'coding' | 'progress';
@@ -36,6 +37,9 @@ export const useAppStore = defineStore('app', () => {
   const isMobileMenuOpen = ref(false);
   const isAIPanelOpen = ref(false);
   const isZoomPanelOpen = ref(false);
+
+  // Visual display state
+  const selectedTeamMember = ref<TeamRole | null>(null);
 
   // Computed properties
   const isDarkMode = computed(() => {
@@ -125,6 +129,15 @@ export const useAppStore = defineStore('app', () => {
   const closeMobilePanels = () => {
     isAIPanelOpen.value = false;
     isZoomPanelOpen.value = false;
+  };
+
+  // Visual display management
+  const setSelectedTeamMember = (teamRole: TeamRole | null) => {
+    selectedTeamMember.value = teamRole;
+  };
+
+  const clearSelectedTeamMember = () => {
+    selectedTeamMember.value = null;
   };
 
   // Deployment mode management
@@ -286,6 +299,7 @@ export const useAppStore = defineStore('app', () => {
     isMobileMenuOpen,
     isAIPanelOpen,
     isZoomPanelOpen,
+    selectedTeamMember,
 
     // Computed
     isDarkMode,
@@ -307,6 +321,8 @@ export const useAppStore = defineStore('app', () => {
     toggleAIPanel,
     toggleZoomPanel,
     closeMobilePanels,
+    setSelectedTeamMember,
+    clearSelectedTeamMember,
     initializeApp
   };
 });

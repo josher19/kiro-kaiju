@@ -1,5 +1,5 @@
-import axios, { AxiosInstance } from 'axios';
-import { Challenge, UserProgress, AIGradingRequest, AIGradingResponse } from '../types';
+import axios, { type AxiosInstance } from 'axios';
+import type { Challenge, UserProgress, AIGradingRequest, AIGradingResponse } from '../types';
 
 export interface CloudConfig {
   apiBaseUrl: string;

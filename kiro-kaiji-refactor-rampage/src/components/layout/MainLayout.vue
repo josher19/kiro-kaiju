@@ -86,6 +86,11 @@
           </button>
         </nav>
         
+        <!-- Visual Display Component -->
+        <div class="px-4 py-3">
+          <VisualDisplay />
+        </div>
+        
         <!-- Deployment Mode Switcher -->
         <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
           <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Deployment Mode</div>
@@ -398,6 +403,7 @@ import AIChatInterface from '@/components/ai/AIChatInterface.vue'
 import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import ProgressTracker from '@/components/progress/ProgressTracker.vue'
 import GradingResults from '@/components/challenge/GradingResults.vue'
+import VisualDisplay from '@/components/common/VisualDisplay.vue'
 import type { Challenge, ChallengeContext } from '@/types'
 import type { AIGradingResponse } from '@/types/api'
 import { ProgrammingLanguage } from '@/types'
@@ -474,11 +480,15 @@ const navigateToView = (viewId: string) => {
 
 const handleChallengeGenerated = (challenge: Challenge) => {
   currentCode.value = challenge.initialCode
+  // Clear selected team member to show Kaiju image
+  appStore.clearSelectedTeamMember()
   appStore.setCurrentView('coding')
 }
 
 const handleChallengeSelected = (challenge: Challenge) => {
   currentCode.value = challenge.initialCode
+  // Clear selected team member to show Kaiju image
+  appStore.clearSelectedTeamMember()
   appStore.setCurrentView('coding')
 }
 
