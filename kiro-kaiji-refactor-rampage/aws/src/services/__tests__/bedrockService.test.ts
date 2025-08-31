@@ -2,16 +2,17 @@ import { BedrockService } from '../bedrockService';
 import { GradingRole } from '../../types';
 
 // Mock AWS SDK
+let mockSend: jest.Mock;
+
 jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
   BedrockRuntimeClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn()
+    send: mockSend = jest.fn(),
   })),
   InvokeModelCommand: jest.fn()
 }));
 
 describe('BedrockService', () => {
   let bedrockService: BedrockService;
-  let mockSend: jest.Mock;
 
   beforeEach(() => {
     bedrockService = new BedrockService();

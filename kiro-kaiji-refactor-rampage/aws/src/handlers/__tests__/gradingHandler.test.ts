@@ -3,30 +3,52 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { GradingRole } from '../../types';
 
 // Mock services
-jest.mock('../services/bedrockService', () => ({
+jest.mock('../../services/bedrockService', () => ({
   BedrockService: jest.fn().mockImplementation(() => ({
     gradeCode: jest.fn()
   }))
 }));
 
-jest.mock('../services/dynamoService', () => ({
+jest.mock('../../services/dynamoService', () => ({
   DynamoService: jest.fn().mockImplementation(() => ({
     addGradingHistory: jest.fn()
+  }))
+}));
+
+// Mock auth middleware
+jest.mock('../../middleware/auth', () => ({
+  authenticateRequest: jest.fn(),
+  createUnauthorizedResponse: jest.fn(() => ({
+    statusCode: 401,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS'
+    },
+    body: JSON.stringify({ error: 'Unauthorized - valid session required' })
   }))
 }));
 
 describe('gradingHandler', () => {
   let mockBedrockService: any;
   let mockDynamoService: any;
+  let mockAuthenticateRequest: any;
 
   beforeEach(() => {
-    mockBedrockService = require('../services/bedrockService').BedrockService();
-    mockDynamoService = require('../services/dynamoService').DynamoService();
+    mockBedrockService = require('../../services/bedrockService').BedrockService();
+    mockDynamoService = require('../../services/dynamoService').DynamoService();
+    mockAuthenticateRequest = require('../../middleware/auth').authenticateRequest;
     jest.clearAllMocks();
   });
 
   describe('gradeCode', () => {
     it('should grade code successfully', async () => {
+      // Mock successful authentication
+      mockAuthenticateRequest.mockResolvedValue({
+        userId: 'user-123',
+        sessionId: 'session-123'
+      });
+
       const mockRoleScores = {
         [GradingRole.DEVELOPER]: [8, 'Good code quality'],
         [GradingRole.ARCHITECT]: [7, 'Decent architecture'],
@@ -38,11 +60,13 @@ describe('gradingHandler', () => {
       mockDynamoService.addGradingHistory.mockResolvedValue(undefined);
 
       const event: Partial<APIGatewayProxyEvent> = {
+        headers: {
+          Authorization: 'Bearer session-123'
+        },
         body: JSON.stringify({
           challengeId: 'challenge-123',
           submittedCode: 'function test() { return "hello"; }',
-          requirements: ['Add error handling', 'Improve readability'],
-          userId: 'user-123'
+          requirements: ['Add error handling', 'Improve readability']
         })
       };
 
@@ -55,6 +79,27 @@ describe('gradingHandler', () => {
       expect(responseBody.averageScore).toBe(7.5); // (8+7+6+9)/4
       expect(responseBody.roleEvaluations[GradingRole.DEVELOPER].score).toBe(8);
       expect(responseBody.roleEvaluations[GradingRole.DEVELOPER].feedback).toBe('Good code quality');
+      
+      // Verify grading history was stored for authenticated user
+      expect(mockDynamoService.addGradingHistory).toHaveBeenCalledWith('user-123', expect.any(Object));
+    });
+
+    it('should return 401 for unauthenticated requests', async () => {
+      // Mock failed authentication
+      mockAuthenticateRequest.mockResolvedValue(null);
+
+      const event: Partial<APIGatewayProxyEvent> = {
+        body: JSON.stringify({
+          challengeId: 'challenge-123',
+          submittedCode: 'function test() { return "hello"; }',
+          requirements: ['Add error handling']
+        })
+      };
+
+      const result = await gradeCode(event as APIGatewayProxyEvent);
+
+      expect(result.statusCode).toBe(401);
+      expect(JSON.parse(result.body).error).toBe('Unauthorized - valid session required');
     });
 
     it('should return 400 for missing request body', async () => {
@@ -92,13 +137,22 @@ describe('gradingHandler', () => {
 
       mockBedrockService.gradeCode.mockResolvedValue(mockRoleScores);
 
+      // Mock successful authentication
+      mockAuthenticateRequest.mockResolvedValue({
+        userId: 'user-123',
+        sessionId: 'session-123'
+      });
+      
       const event: Partial<APIGatewayProxyEvent> = {
         body: JSON.stringify({
           challengeId: 'challenge-123',
           submittedCode: 'function test() { return "hello"; }',
           requirements: ['Add error handling', 'Improve readability']
           // No userId provided
-        })
+        }),
+        headers: {
+          Authorization: 'Bearer session-123'
+        },
       };
 
       const result = await gradeCode(event as APIGatewayProxyEvent);
@@ -108,7 +162,13 @@ describe('gradingHandler', () => {
     });
 
     it('should handle Bedrock service errors', async () => {
+      // Mock failed Bedrock request
       mockBedrockService.gradeCode.mockRejectedValue(new Error('Bedrock error'));
+      // Mock successful authentication
+      mockAuthenticateRequest.mockResolvedValue({
+        userId: 'user-123',
+        sessionId: 'session-123'
+      });
 
       const event: Partial<APIGatewayProxyEvent> = {
         body: JSON.stringify({
@@ -125,6 +185,12 @@ describe('gradingHandler', () => {
     });
 
     it('should include CORS headers', async () => {
+        // Mock successful authentication
+        mockAuthenticateRequest.mockResolvedValue({
+          userId: 'user-123',
+          sessionId: 'session-123'
+        });
+      
       const event: Partial<APIGatewayProxyEvent> = {
         body: JSON.stringify({
           challengeId: 'challenge-123',
@@ -144,7 +210,7 @@ describe('gradingHandler', () => {
 
       expect(result.headers).toEqual({
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       });
     });

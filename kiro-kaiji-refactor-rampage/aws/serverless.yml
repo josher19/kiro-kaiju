@@ -2,6 +2,10 @@ service: kiro-kaiji-refactor-rampage
 
 frameworkVersion: '3'
 
+custom:
+  serverless-offline:
+    httpPort: 3333
+
 provider:
   name: aws
   runtime: nodejs18.x
@@ -108,3 +112,4 @@ resources:
 
 plugins:
   - serverless-offline
+  - serverless-plugin-typescript

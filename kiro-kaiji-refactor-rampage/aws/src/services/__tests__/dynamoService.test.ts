@@ -1,31 +1,33 @@
 import { DynamoService } from '../dynamoService';
-import { UserProgress, GradingHistoryEntry, GradingRole } from '../../types';
-
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: jest.fn()
-}));
-
-jest.mock('@aws-sdk/lib-dynamodb', () => ({
-  DynamoDBDocumentClient: {
-    from: jest.fn().mockReturnValue({
-      send: jest.fn()
-    })
-  },
-  GetCommand: jest.fn(),
-  PutCommand: jest.fn(),
-  UpdateCommand: jest.fn(),
-  QueryCommand: jest.fn()
-}));
+import { UserProgress, GradingHistoryEntry, GradingRole, KaijuType } from '../../types';
 
 describe('DynamoService', () => {
   let dynamoService: DynamoService;
   let mockSend: jest.Mock;
 
-  beforeEach(() => {
-    dynamoService = new DynamoService();
-    mockSend = require('@aws-sdk/lib-dynamodb').DynamoDBDocumentClient.from().send;
+  afterAll(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    // Mock AWS SDK
+    mockSend = jest.fn();
+    jest.mock('@aws-sdk/client-dynamodb', () => ({
+      DynamoDBClient: jest.fn()
+    }));
+
+    jest.mock('@aws-sdk/lib-dynamodb', () => ({
+      DynamoDBDocumentClient: {
+        from: jest.fn().mockReturnValue({
+          send: mockSend
+        })
+      },
+      GetCommand: jest.fn(),
+      PutCommand: jest.fn(),
+      UpdateCommand: jest.fn(),
+      QueryCommand: jest.fn()
+    }));
+    dynamoService = new DynamoService();
   });
 
   describe('getUserProgress', () => {
@@ -37,7 +39,13 @@ describe('DynamoService', () => {
         stats: {
           totalChallenges: 1,
           averageScore: 8.5,
-          kaijuDefeated: {}
+          kaijuDefeated: {
+            [KaijuType.HYDRA_BUG]: 0,
+            [KaijuType.COMPLEXASAUR]: 1,
+            [KaijuType.DUPLICATRON]: 0,
+            [KaijuType.SPAGHETTIZILLA]: 0,
+            [KaijuType.MEMORYLEAK_ODACTYL]: 0
+          }
         },
         gradingHistory: [],
         createdAt: '2024-01-01T00:00:00Z',
@@ -77,7 +85,13 @@ describe('DynamoService', () => {
         stats: {
           totalChallenges: 1,
           averageScore: 8.5,
-          kaijuDefeated: {}
+          kaijuDefeated: {
+            [KaijuType.HYDRA_BUG]: 0,
+            [KaijuType.COMPLEXASAUR]: 1,
+            [KaijuType.DUPLICATRON]: 0,
+            [KaijuType.SPAGHETTIZILLA]: 0,
+            [KaijuType.MEMORYLEAK_ODACTYL]: 0
+          }
         },
         gradingHistory: [],
         createdAt: '2024-01-01T00:00:00Z',
@@ -98,7 +112,13 @@ describe('DynamoService', () => {
         stats: {
           totalChallenges: 0,
           averageScore: 0,
-          kaijuDefeated: {}
+          kaijuDefeated: {
+            [KaijuType.HYDRA_BUG]: 0,
+            [KaijuType.COMPLEXASAUR]: 0,
+            [KaijuType.DUPLICATRON]: 0,
+            [KaijuType.SPAGHETTIZILLA]: 0,
+            [KaijuType.MEMORYLEAK_ODACTYL]: 0
+          }
         },
         gradingHistory: [],
         createdAt: '2024-01-01T00:00:00Z',
@@ -145,7 +165,13 @@ describe('DynamoService', () => {
         stats: {
           totalChallenges: 1,
           averageScore: 8.0,
-          kaijuDefeated: {}
+          kaijuDefeated: {
+            [KaijuType.HYDRA_BUG]: 0,
+            [KaijuType.COMPLEXASAUR]: 1,
+            [KaijuType.DUPLICATRON]: 0,
+            [KaijuType.SPAGHETTIZILLA]: 0,
+            [KaijuType.MEMORYLEAK_ODACTYL]: 0
+          }
         },
         gradingHistory: [],
         createdAt: '2024-01-01T00:00:00Z',
@@ -202,6 +228,7 @@ describe('DynamoService', () => {
 
       const result = await dynamoService.getSession('session-123');
 
+      expect(mockSend).toHaveBeenCalled();
       expect(result).toEqual(mockSession);
     });
 

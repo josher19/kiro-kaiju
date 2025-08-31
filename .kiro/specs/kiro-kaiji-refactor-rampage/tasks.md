@@ -165,13 +165,18 @@
   - Commit changes (one line description) after all this task is complete via git commit
   - _Requirements: All requirements depend on a stable build process_
 
-- [ ] 17. Implement AWS Cloud Mode Services
-  - Set up AWS Lambda functions for challenge generation and evaluation
+- [x] 17. Implement AWS Cloud Mode Services
+  - Use serverless v3 for deploying AWS Code
+  - Set up AWS Lambda functions for challenge generation and grading via AI Services
   - Configure DynamoDB for user progress and challenge storage
-  - Integrate multi-provider AI support (Local LLM, Remote LLM, Kiro AI)
+  - Do not expose AWS Credentials directly to the front-end
+  - Keep back-end code in an "aws" folder
   - Implement user authentication and session management
   - Create API endpoints for all cloud-based functionality
-  - Write integration tests for AWS services and AI provider switching
+  - Integrate multi-provider AI support using AWS Bedrock with an inexpensive model that can grade Code and an openai compatible interface (/v1/models, /v1/chat/completions) via one or more Lambdas
+  - Login required in order to use most endpoints
+  - Write mocked unit or integration tests for AWS services and AI provider switching.
+  - Use minimal amount of AWS services and code to fullfill this Task
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
 
 - [x] 18. Add Error Handling and Offline Support

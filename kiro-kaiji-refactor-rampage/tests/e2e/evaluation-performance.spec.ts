@@ -53,7 +53,7 @@ module.exports = { calculateTotal };
         expect(readabilityScore).toBeTruthy();
         
         // Verify score is numeric and within expected range
-        const scoreMatch = readabilityScore.match(/(\d+)/);
+        const scoreMatch = String(readabilityScore).match(/(\d+)/);
         if (scoreMatch) {
           const score = parseInt(scoreMatch[1]);
           expect(score).toBeGreaterThanOrEqual(0);
@@ -137,7 +137,7 @@ function anotherBug() {
         await expect(feedback).toBeVisible();
         
         const feedbackText = await feedback.textContent();
-        expect(feedbackText.toLowerCase()).toMatch(/(bug|error|defect|issue)/);
+        expect(String(feedbackText).toLowerCase()).toMatch(/(bug|error|defect|issue)/);
       });
     });
 
@@ -226,7 +226,7 @@ module.exports = { factorial };
         
         const feedback = await page.locator('[data-testid="evaluation-feedback"]').textContent();
         expect(feedback).toBeTruthy();
-        expect(feedback.length).toBeGreaterThan(10); // Should have substantial feedback
+        expect(String(feedback).length).toBeGreaterThan(10); // Should have substantial feedback
       });
     });
 

@@ -1,5 +1,5 @@
 {
-  "name": "kiro-kaiji-aws-backend",
+  "name": "kiro-kaiju-aws-backend",
   "version": "1.0.0",
   "description": "AWS Lambda backend for Kiro Kaiji Refactor Rampage",
   "main": "index.js",
@@ -16,6 +16,7 @@
     "@aws-sdk/client-dynamodb": "^3.450.0",
     "@aws-sdk/lib-dynamodb": "^3.450.0",
     "jsonwebtoken": "^9.0.2",
+    "serverless-plugin-typescript": "^2.1.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

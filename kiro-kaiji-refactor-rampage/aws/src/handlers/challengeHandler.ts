@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { BedrockService } from '../services/bedrockService';
+import { authenticateRequest, createUnauthorizedResponse } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { KaijuType } from '../types';
 
@@ -9,12 +10,18 @@ export const generateChallenge = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
+    // Require authentication
+    const auth = await authenticateRequest(event);
+    if (!auth) {
+      return createUnauthorizedResponse();
+    }
+
     if (!event.body) {
       return {
         statusCode: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         body: JSON.stringify({ error: 'Request body is required' })
@@ -28,7 +35,7 @@ export const generateChallenge = async (
         statusCode: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Methods': 'POST, OPTIONS'
         },
         body: JSON.stringify({ error: 'Language and difficulty are required' })
@@ -60,7 +67,7 @@ export const generateChallenge = async (
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: JSON.stringify(challenge)
@@ -71,7 +78,7 @@ export const generateChallenge = async (
       statusCode: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'POST, OPTIONS'
       },
       body: JSON.stringify({ error: 'Failed to generate challenge' })

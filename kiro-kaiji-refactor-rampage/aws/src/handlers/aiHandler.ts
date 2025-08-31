@@ -1,5 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { BedrockService } from '../services/bedrockService';
+import { authenticateRequest, createUnauthorizedResponse } from '../middleware/auth';
 
 const bedrockService = new BedrockService();
 
@@ -50,6 +51,12 @@ export const chatCompletion = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
+    // Require authentication for chat completions
+    const auth = await authenticateRequest(event);
+    if (!auth) {
+      return createUnauthorizedResponse();
+    }
+
     if (!event.body) {
       return {
         statusCode: 400,

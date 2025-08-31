@@ -1,6 +1,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { UserProgress, AuthSession, GradingHistoryEntry } from '../types';
+import { UserProgress, AuthSession, GradingHistoryEntry, KaijuType } from '../types';
 
 export class DynamoService {
   private client: DynamoDBDocumentClient;
@@ -9,7 +9,7 @@ export class DynamoService {
   constructor() {
     const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
     this.client = DynamoDBDocumentClient.from(dynamoClient);
-    this.tableName = process.env.DYNAMODB_TABLE || 'kiro-kaiji-refactor-rampage-dev';
+    this.tableName = process.env.DYNAMODB_TABLE || 'kiro-kaiju-refactor-rampage-dev';
   }
 
   async getUserProgress(userId: string): Promise<UserProgress | null> {
@@ -62,7 +62,13 @@ export class DynamoService {
           stats: {
             totalChallenges: 1,
             averageScore: gradingEntry.averageScore,
-            kaijuDefeated: {}
+            kaijuDefeated: {
+              [KaijuType.HYDRA_BUG]: 0,
+              [KaijuType.COMPLEXASAUR]: 0,
+              [KaijuType.DUPLICATRON]: 0,
+              [KaijuType.SPAGHETTIZILLA]: 0,
+              [KaijuType.MEMORYLEAK_ODACTYL]: 0
+            }
           },
           gradingHistory: [gradingEntry],
           createdAt: new Date().toISOString(),
@@ -112,7 +118,9 @@ export class DynamoService {
         Item: {
           userId: `SESSION_${sessionId}`,
           challengeId: 'AUTH',
-          ...session
+          sessionId: session.sessionId,
+          expiresAt: session.expiresAt,
+          createdAt: session.createdAt
         }
       });
 

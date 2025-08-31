@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoService } from '../services/dynamoService';
-import { UserProgress } from '../types';
+import { authenticateRequest, createUnauthorizedResponse } from '../middleware/auth';
+import { UserProgress, KaijuType } from '../types';
 
 const dynamoService = new DynamoService();
 
@@ -8,24 +9,43 @@ export const updateProgress = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
+    // Require authentication
+    const auth = await authenticateRequest(event);
+    if (!auth) {
+      return createUnauthorizedResponse();
+    }
+
     const userId = event.pathParameters?.userId;
-    
+
     if (!userId) {
       return {
         statusCode: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
         },
         body: JSON.stringify({ error: 'User ID is required' })
       };
     }
 
+    // Ensure the authenticated user can only access their own data
+    if (auth.userId !== userId) {
+      return {
+        statusCode: 403,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
+        },
+        body: JSON.stringify({ error: 'Access denied - can only access your own progress' })
+      };
+    }
+
     if (event.httpMethod === 'GET') {
       // Get user progress
       const progress = await dynamoService.getUserProgress(userId);
-      
+
       if (!progress) {
         // Return default progress for new users
         const defaultProgress: UserProgress = {
@@ -35,7 +55,13 @@ export const updateProgress = async (
           stats: {
             totalChallenges: 0,
             averageScore: 0,
-            kaijuDefeated: {}
+            kaijuDefeated: {
+              [KaijuType.HYDRA_BUG]: 0,
+              [KaijuType.COMPLEXASAUR]: 0,
+              [KaijuType.DUPLICATRON]: 0,
+              [KaijuType.SPAGHETTIZILLA]: 0,
+              [KaijuType.MEMORYLEAK_ODACTYL]: 0
+            }
           },
           gradingHistory: [],
           createdAt: new Date().toISOString(),
@@ -46,7 +72,7 @@ export const updateProgress = async (
           statusCode: 200,
           headers: {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
           },
           body: JSON.stringify(defaultProgress)
@@ -57,7 +83,7 @@ export const updateProgress = async (
         statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
         },
         body: JSON.stringify(progress)
@@ -71,7 +97,7 @@ export const updateProgress = async (
           statusCode: 400,
           headers: {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
           },
           body: JSON.stringify({ error: 'Request body is required' })
@@ -80,14 +106,14 @@ export const updateProgress = async (
 
       const progressUpdate: UserProgress = JSON.parse(event.body);
       progressUpdate.userId = userId; // Ensure userId matches path parameter
-      
+
       await dynamoService.updateUserProgress(progressUpdate);
 
       return {
         statusCode: 200,
         headers: {
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
         },
         body: JSON.stringify({ message: 'Progress updated successfully' })
@@ -98,7 +124,7 @@ export const updateProgress = async (
       statusCode: 405,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
       },
       body: JSON.stringify({ error: 'Method not allowed' })
@@ -109,7 +135,7 @@ export const updateProgress = async (
       statusCode: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS'
       },
       body: JSON.stringify({ error: 'Failed to handle progress request' })
