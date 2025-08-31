@@ -58,7 +58,7 @@
   - Implement message history and context management
   - Add automatic scroll to bottom at average reading speed when new messages are added (not expanding window size)
   - Add loading states and error handling for AI responses
-  - Integrate with multiple AI providers (Kiro AI, Local LLM, Remote LLM)
+  - Integrate with multiple AI providers (AWS LLM, Local LLM, Remote LLM)
   - Implement AI capabilities for refactoring assistance, unit test generation, and requirement implementation guidance
   - Ensure challenge and code state context is maintained throughout AI interactions
   - Write tests for chat functionality, auto-scroll behavior, and API integration

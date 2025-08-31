@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Kiro Kaiji: Refactor Rampage is an award-winning educational web application that gamifies the learning of code refactoring and feature development skills. The app presents users with deliberately problematic code challenges themed around programming "Kaiju" monsters, where each monster represents a specific type of coding anti-pattern or challenge. Users must refactor the code, add new features, and overcome the monstrous coding obstacles while being able to get help from AI assistance and quirky virtual team members.
+Kiro Kaiju: Refactor Rampage is an award-winning educational web application that gamifies the learning of code refactoring and feature development skills. The app presents users with deliberately problematic code challenges themed around programming "Kaiju" monsters, where each monster represents a specific type of coding anti-pattern or challenge. Users must refactor the code, add new features, and overcome the monstrous coding obstacles while being able to get help from AI assistance and quirky virtual team members.
 
 ## Requirements
 
@@ -32,16 +32,17 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 
 ### Requirement 3
 
-**User Story:** As a user working on challenges, I want to access Kiro AI assistance for refactoring, testing, and implementing requirements, so that I can learn best practices while solving the challenge.
+**User Story:** As a user working on challenges, I want to access AI assistance for refactoring, testing, and implementing requirements, so that I can learn best practices while solving the challenge.
 
 #### Acceptance Criteria
 
-1. WHEN a user is viewing a challenge THEN the system SHALL provide an integrated Kiro AI chat interface
-2. WHEN a user asks for refactoring help THEN Kiro AI SHALL provide specific suggestions for improving the code structure
-3. WHEN a user requests unit test creation THEN Kiro AI SHALL generate appropriate test cases for the code
-4. WHEN a user needs help implementing new requirements THEN Kiro AI SHALL guide them through the implementation process
-5. WHEN a user interacts with Kiro AI THEN the system SHALL maintain context of the current challenge and code state
+1. WHEN a user is viewing a challenge THEN the system SHALL provide an integrated AI Assistant chat interface
+2. WHEN a user asks for refactoring help THEN AI Assistant SHALL provide specific suggestions for improving the code structure
+3. WHEN a user requests unit test creation THEN AI Assistant SHALL generate appropriate test cases for the code
+4. WHEN a user needs help implementing new requirements THEN AI Assistant SHALL guide them through the implementation process
+5. WHEN a user interacts with AI Assistant THEN the system SHALL maintain context of the current challenge and code state
 6. WHEN new messages are added to the AI chat THEN the system SHALL automatically scroll the chat history to the bottom at average reading speed rather than expanding the window size
+7. WHEN AI Assistant and Zoom-A-Friend messages are displayed, Markdown format will be converted into HTML
 
 ### Requirement 4
 
@@ -55,6 +56,7 @@ Kiro Kaiji: Refactor Rampage is an award-winning educational web application tha
 4. WHEN a user selects Product Owner (Pig) THEN the system SHALL provide requirements clarification with AI Product Owner dialog
 5. WHEN a user selects Senior Developer (Cat) THEN the system SHALL provide coding best practices with Software Development AI themed dialog
 6. WHEN any avatar provides advice THEN the dialog SHALL consist mostly of animal sounds with key technical terms interspersed
+7. WHEN Zoom-A-Friend messages are displayed, Markdown format will be converted into HTML
 
 ### Requirement 5
 

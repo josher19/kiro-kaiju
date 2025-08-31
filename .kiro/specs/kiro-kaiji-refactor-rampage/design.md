@@ -23,7 +23,7 @@ graph TB
     D --> J[Test Runner]
     
     E --> K{AI Provider Selection}
-    K --> L[Kiro AI API]
+    K --> L[AI API]
     K --> M[Local LLM - LLM Studio]
     K --> N[Remote LLM - OpenRouter]
     
@@ -223,6 +223,7 @@ interface AIChatInterface {
   challengeContext: ChallengeContext;
   autoScrollBehavior: 'smooth' | 'instant'; // Auto-scroll to bottom at reading speed
   scrollSpeed: number; // Average reading speed for smooth scrolling
+  markdownToHtml: boolean; // Convert Markdown format to HTML for AI Assistant messages (Requirement 3.7)
 }
 
 interface AIServiceConfig {
@@ -246,6 +247,7 @@ interface AICapabilities {
   testGeneration: boolean; // Generate appropriate unit test cases
   requirementImplementation: boolean; // Guide through implementation process
   contextMaintenance: boolean; // Maintain challenge and code state context
+  markdownRendering: boolean; // Convert Markdown format to HTML for message display (Requirement 3.7)
 }
 ```
 
@@ -298,6 +300,7 @@ interface ZoomAFriendInteraction {
     seniorDeveloper: 'coding-best-practices'; // Software Development AI themed dialog (Requirement 4.5)
   };
   codeCommentGeneration: boolean; // Add AI-generated comments to existing code
+  markdownToHtml: boolean; // Convert Markdown format to HTML for Zoom-A-Friend messages (Requirement 4.7)
 }
 ```
 
@@ -653,6 +656,7 @@ interface ZoomAFriendService {
   addCodeComments: (code: string, comments: CodeComment[]) => string;
   getAIDialogForRole: (role: TeamRole, context: ChallengeContext) => Promise<string>;
   createAnimalThemedDialog: (role: TeamRole, technicalContent: string) => string;
+  convertMarkdownToHtml: (markdownContent: string) => string; // Convert Markdown to HTML for Zoom-A-Friend messages (Requirement 4.7)
 }
 ```
 
@@ -738,6 +742,56 @@ class ErrorHandler {
 - Cross-browser compatibility testing
 - Mobile touch interaction testing
 - Kaiju animation performance testing
+
+## Message Rendering System
+
+### Markdown to HTML Conversion
+The application implements a comprehensive message rendering system to handle AI Assistant and Zoom-A-Friend communications that may contain formatted content.
+
+#### Design Rationale
+AI responses often include code snippets, lists, emphasis, and other formatted content that benefits from proper HTML rendering rather than plain text display. This enhances readability and user experience when receiving technical guidance.
+
+#### Implementation Strategy
+```typescript
+interface MessageRenderer {
+  convertMarkdownToHtml: (content: string) => string;
+  sanitizeHtml: (htmlContent: string) => string; // Security: prevent XSS attacks
+  supportedMarkdownFeatures: [
+    'code-blocks',
+    'inline-code',
+    'bold-italic',
+    'lists',
+    'links',
+    'headers'
+  ];
+  renderingOptions: {
+    codeHighlighting: boolean; // Syntax highlighting for code blocks
+    linkTargetBlank: boolean; // Open links in new tabs
+    sanitization: 'strict' | 'moderate'; // HTML sanitization level
+  };
+}
+
+interface AIMessageDisplay {
+  rawContent: string; // Original AI response content
+  renderedContent: string; // HTML-rendered content for display
+  renderingTimestamp: Date;
+  contentType: 'ai-assistant' | 'zoom-a-friend';
+}
+```
+
+#### Security Considerations
+- All HTML content is sanitized to prevent XSS attacks
+- Only safe HTML tags and attributes are allowed
+- External links are configured to open in new tabs
+- Code blocks are syntax-highlighted but not executed
+
+#### Supported Markdown Features
+- **Code Blocks**: Syntax-highlighted code examples
+- **Inline Code**: Monospace formatting for code snippets
+- **Emphasis**: Bold and italic text formatting
+- **Lists**: Ordered and unordered lists for structured content
+- **Links**: Clickable links to external resources
+- **Headers**: Section headers for organized content
 
 ## Mobile Responsiveness Design
 
