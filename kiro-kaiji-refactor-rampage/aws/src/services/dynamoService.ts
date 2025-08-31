@@ -1,13 +1,32 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { UserProgress, AuthSession, GradingHistoryEntry, KaijuType } from '../types';
+
+
+const isOffline = process.env.IS_OFFLINE; // serverless-offline sets this automatically
+let dynamoConfig: DynamoDBClientConfig;
+
+if (isOffline) {
+  // Use a different client for local development
+  dynamoConfig = {
+    region: 'us-west-2',
+    endpoint: 'http://localhost:8000', // Default port for serverless-dynamodb
+    credentials: {
+      accessKeyId: 'offlineaccesskey', // These can be anything for offline
+      secretAccessKey: 'offlineaccesskey',
+    },
+  };
+  console.log('Using offline mode for DynamoDB');
+} else {
+  dynamoConfig = { region: process.env.AWS_REGION || 'us-west-2' }
+}
 
 export class DynamoService {
   private client: DynamoDBDocumentClient;
   private tableName: string;
 
   constructor() {
-    const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+    const dynamoClient = new DynamoDBClient(dynamoConfig);
     this.client = DynamoDBDocumentClient.from(dynamoClient);
     this.tableName = process.env.DYNAMODB_TABLE || 'kiro-kaiju-refactor-rampage-dev';
   }

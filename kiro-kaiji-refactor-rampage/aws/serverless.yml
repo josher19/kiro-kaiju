@@ -1,10 +1,19 @@
-service: kiro-kaiji-refactor-rampage
+service: kiro-kaiju-refactor-rampage
 
 frameworkVersion: '3'
 
 custom:
   serverless-offline:
     httpPort: 3333
+  #   noStart: false
+
+  # dynamodb:
+  #   # Set to true to automatically create tables during offline start.
+  #   start:
+  #     migrate: true 
+  #   # Use 'dev' to apply this configuration only for local development.
+  #   stages:
+  #     - dev
 
 provider:
   name: aws
@@ -111,5 +120,6 @@ resources:
         BillingMode: PAY_PER_REQUEST
 
 plugins:
+  - serverless-dynamodb-local
   - serverless-offline
   - serverless-plugin-typescript
