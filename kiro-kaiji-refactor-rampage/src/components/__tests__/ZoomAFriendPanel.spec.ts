@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import ZoomAFriendPanel from '@/components/ai/ZoomAFriendPanel.vue'
 import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
 import type { CodeComment } from '@/types/team'
@@ -40,8 +41,15 @@ describe('ZoomAFriendPanel', () => {
   }
 
   beforeEach(() => {
+    // Set up Pinia
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    
     wrapper = mount(ZoomAFriendPanel, {
-      props: defaultProps
+      props: defaultProps,
+      global: {
+        plugins: [pinia]
+      }
     })
   })
 

@@ -150,8 +150,8 @@ describe('AIChatInterface', () => {
       const textarea = wrapper.find('textarea');
       const sendButton = wrapper.find('button[class*="bg-blue-500"], button[class*="bg-gray-300"]');
       
-      // Initially disabled (check if button has disabled class or attribute)
-      expect(sendButton?.classes()).toContain('cursor-not-allowed');
+      // Initially disabled (check if button has disabled attribute)
+      expect(sendButton?.attributes('disabled')).toBeDefined();
       
       // Enter message
       await textarea.setValue('Help me with this code');

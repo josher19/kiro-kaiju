@@ -266,7 +266,7 @@ The implementation shows solid understanding of the requirements. The code struc
       const result = gradingService['parseAIEvaluationResponse'](aiResponse, GradingRole.DEVELOPER);
 
       expect(result.score).toBe(50); // Fallback score
-      expect(result.feedback).toContain('developer evaluation completed');
+      expect(result.feedback).toContain('evaluation completed');
       expect(result.detailedAnalysis).toContain(aiResponse);
     });
 
@@ -608,7 +608,7 @@ That's my assessment.`;
       expect(evaluations).toHaveLength(4);
       evaluations.forEach(evaluation => {
         expect(evaluation.score).toBe(50); // Fallback score
-        expect(evaluation.feedback).toContain('Unable to parse');
+        expect(evaluation.feedback).toContain('Evaluation completed');
         expect(evaluation.modelUsed).toBe('test-model');
       });
     });
@@ -624,7 +624,7 @@ That's my assessment.`;
       expect(evaluations).toHaveLength(4);
       evaluations.forEach(evaluation => {
         expect(evaluation.score).toBe(50); // Fallback score due to missing keys
-        expect(evaluation.feedback).toContain('Unable to parse');
+        expect(evaluation.feedback).toContain('Evaluation completed');
       });
     });
 

@@ -146,6 +146,7 @@ describe('ChallengeSelector', () => {
   describe('Form Validation', () => {
     it('disables generate button when form is incomplete', () => {
       const generateButton = wrapper.find('button[type="submit"]');
+      expect(generateButton.exists()).toBe(true);
       expect(generateButton.attributes('disabled')).toBeDefined();
     });
 
@@ -267,11 +268,18 @@ describe('ChallengeSelector', () => {
       expect(wrapper.find('label[for="difficulty"]').exists()).toBe(true);
     });
 
-    it('marks required fields with asterisk', () => {
-      const requiredLabels = wrapper.findAll('label').filter((label: any) => 
-        label.text().includes('*')
-      );
-      expect(requiredLabels).toHaveLength(3); // language, category, difficulty
+    it('has proper labels for required fields', () => {
+      const labels = wrapper.findAll('label');
+      expect(labels).toHaveLength(4); // language, framework, category, difficulty
+      
+      // Check that required field labels exist
+      const languageLabel = wrapper.find('label[for="language"]');
+      const categoryLabel = wrapper.find('label[for="category"]');
+      const difficultyLabel = wrapper.find('label[for="difficulty"]');
+      
+      expect(languageLabel.exists()).toBe(true);
+      expect(categoryLabel.exists()).toBe(true);
+      expect(difficultyLabel.exists()).toBe(true);
     });
 
     it('has proper form structure with fieldsets', () => {

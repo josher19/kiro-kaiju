@@ -222,7 +222,7 @@ function calculateTotalWithTax(items) {
         1
       );
 
-      expect(result.filesModified).toContain(expect.stringContaining('evaluation-results.json'));
+      expect(result.filesModified.some(file => file.includes('evaluation-results.json'))).toBe(true);
       expect(mockKiroAPI.fileSystem.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('evaluation-results.json'),
         expect.any(String)
@@ -319,20 +319,13 @@ function calculateTotalWithTax(items) {
         1
       );
 
-      expect(mockKiroAPI.ai.analyze).toHaveBeenCalledWith({
-        code: testCode,
-        language: mockChallenge.config.language,
-        context: {
-          challenge: mockChallenge.title,
-          kaiju: mockChallenge.kaiju.name,
-          requirements: mockChallenge.requirements.map(req => req.description)
-        },
-        options: {
-          includeRefactoringSuggestions: true,
-          includePerformanceAnalysis: true,
-          includeSecurityAnalysis: true
+      expect(mockKiroAPI.ai.analyze).toHaveBeenCalledWith(
+        expect.stringContaining(testCode),
+        {
+          challengeId: mockChallenge.id,
+          language: mockChallenge.config.language
         }
-      });
+      );
 
       // Check if Kiro-specific feedback was added
       const kiroFeedback = result.evaluationResult.feedback.find(

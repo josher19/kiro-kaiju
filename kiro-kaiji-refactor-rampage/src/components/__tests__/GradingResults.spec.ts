@@ -224,7 +224,11 @@ describe('GradingResults', () => {
       expect(wrapper.find('.border-t.border-gray-200').exists()).toBe(false);
 
       // Click show details button for first role
-      const showDetailsButton = wrapper.findAll('.text-blue-600')[0];
+      const showDetailsButtons = wrapper.findAll('button').filter(btn => 
+        btn.text().includes('Details')
+      );
+      expect(showDetailsButtons.length).toBeGreaterThan(0);
+      const showDetailsButton = showDetailsButtons[0];
       expect(showDetailsButton.text()).toBe('Show Details');
       
       await showDetailsButton.trigger('click');
@@ -361,7 +365,9 @@ describe('GradingResults', () => {
       const wrapper = createWrapper();
 
       // Check that score text has appropriate color classes
-      const scoreTexts = wrapper.findAll('.text-2xl.font-bold');
+      const scoreTexts = wrapper.findAll('span.text-2xl.font-bold');
+      expect(scoreTexts.length).toBeGreaterThan(0);
+      
       scoreTexts.forEach(scoreText => {
         const classes = scoreText.classes();
         const hasColorClass = classes.some(cls => 
@@ -380,7 +386,14 @@ describe('GradingResults', () => {
 
       const buttons = wrapper.findAll('button');
       buttons.forEach(button => {
-        expect(button.text().trim()).not.toBe('');
+        // Skip icon-only buttons (they should have aria-label or similar)
+        if (button.find('svg').exists()) {
+          // Icon buttons should have accessible attributes
+          expect(button.attributes('aria-label') || button.attributes('title')).toBeTruthy();
+        } else {
+          // Text buttons should have non-empty text
+          expect(button.text().trim()).not.toBe('');
+        }
       });
     });
   });
