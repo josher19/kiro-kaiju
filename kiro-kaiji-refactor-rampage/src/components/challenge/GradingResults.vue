@@ -121,25 +121,17 @@
       </div>
     </div>
 
-    <!-- Auto-navigation Notice -->
-    <div v-if="props.autoNavigateCountdown > 0" class="mb-8 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <div class="text-blue-500 dark:text-blue-400">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <div class="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Great job!</strong> Your progress has been saved. Navigating to Progress page in <strong>{{ props.autoNavigateCountdown }}</strong> seconds...
-          </div>
+    <!-- Success Notice -->
+    <div class="mb-8 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+      <div class="flex items-center space-x-2">
+        <div class="text-green-500 dark:text-green-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
         </div>
-        <button
-          @click="$emit('cancel-auto-navigate')"
-          class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          Cancel
-        </button>
+        <div class="text-sm text-green-800 dark:text-green-200">
+          <strong>Great job!</strong> Your progress has been saved. Click "View My Progress" to see your updated stats and achievements.
+        </div>
       </div>
     </div>
 
@@ -174,18 +166,14 @@ import { GradingRole } from '@/types/api';
 
 interface Props {
   results: AIGradingResponse;
-  autoNavigateCountdown?: number;
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  autoNavigateCountdown: 0
-});
+defineProps<Props>();
 
 defineEmits<{
   close: [];
   'save-to-history': [];
   'view-history': [];
-  'cancel-auto-navigate': [];
 }>();
 
 // State for expandable detailed analysis
