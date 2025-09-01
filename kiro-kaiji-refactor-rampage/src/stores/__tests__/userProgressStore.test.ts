@@ -668,5 +668,85 @@ describe('User Progress Store', () => {
 
       expect(store.userProgress?.gradingHistory).toHaveLength(50);
     });
+
+    it('should convert date strings to Date objects when loading from localStorage', async () => {
+      const mockProgress = {
+        userId: 'user123',
+        username: 'testuser',
+        completedChallenges: [],
+        achievements: [{
+          id: 'test',
+          name: 'Test Achievement',
+          description: 'Test',
+          icon: '🏆',
+          category: 'milestone',
+          unlockedAt: '2024-01-01T00:00:00.000Z', // String date
+          rarity: 'common'
+        }],
+        stats: {
+          totalChallenges: 0,
+          challengesCompleted: 0,
+          averageScore: 0,
+          bestScore: 0,
+          totalTimeSpent: 0,
+          kaijuDefeated: {
+            'hydra-bug': 0,
+            'complexasaur': 0,
+            'duplicatron': 0,
+            'spaghettizilla': 0,
+            'memoryleak-odactyl': 0
+          },
+          categoriesCompleted: {
+            'refactoring': 0,
+            'bug-fixing': 0,
+            'feature-addition': 0,
+            'performance-optimization': 0,
+            'testing': 0,
+            'code-review': 0,
+            'architecture': 0
+          },
+          improvementTrend: [],
+          currentStreak: 0,
+          longestStreak: 0
+        },
+        unlockedDifficulties: ['beginner'],
+        unlockedKaiju: ['hydra-bug'],
+        preferences: {
+          theme: 'light',
+          language: 'en',
+          notifications: true,
+          soundEffects: true,
+          autoSave: true,
+          codeEditorSettings: {
+            fontSize: 14,
+            tabSize: 2,
+            wordWrap: true,
+            minimap: true
+          }
+        },
+        gradingHistory: [{
+          challengeId: 'challenge1',
+          gradingTimestamp: '2024-01-01T12:00:00.000Z', // String date
+          roleScores: { developer: 85 },
+          averageScore: 85,
+          modelsUsed: ['test-model'],
+          challengeType: 'refactoring',
+          kaijuType: 'hydra-bug'
+        }],
+        createdAt: '2024-01-01T00:00:00.000Z', // String date
+        updatedAt: '2024-01-02T00:00:00.000Z'  // String date
+      };
+
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockProgress));
+
+      const store = useUserProgressStore();
+      await store.loadProgress('user123');
+
+      // Verify dates are converted to Date objects
+      expect(store.userProgress?.createdAt).toBeInstanceOf(Date);
+      expect(store.userProgress?.updatedAt).toBeInstanceOf(Date);
+      expect(store.userProgress?.achievements[0].unlockedAt).toBeInstanceOf(Date);
+      expect(store.userProgress?.gradingHistory[0].gradingTimestamp).toBeInstanceOf(Date);
+    });
   });
 });

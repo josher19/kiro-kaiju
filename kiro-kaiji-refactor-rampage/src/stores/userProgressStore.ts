@@ -300,6 +300,13 @@ export const useUserProgressStore = defineStore('userProgress', () => {
           ...achievement,
           unlockedAt: new Date(achievement.unlockedAt)
         }));
+        // Convert grading history timestamps
+        if (parsed.gradingHistory) {
+          parsed.gradingHistory = parsed.gradingHistory.map((entry: any) => ({
+            ...entry,
+            gradingTimestamp: new Date(entry.gradingTimestamp)
+          }));
+        }
         userProgress.value = parsed;
       } else {
         // Initialize new progress if none exists

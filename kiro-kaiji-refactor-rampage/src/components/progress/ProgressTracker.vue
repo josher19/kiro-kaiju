@@ -115,7 +115,7 @@
       <div class="space-y-3">
         <div 
           v-for="entry in recentGradingHistory" 
-          :key="`${entry.challengeId}-${entry.gradingTimestamp.getTime()}`"
+          :key="`${entry.challengeId}-${new Date(entry.gradingTimestamp).getTime()}`"
           class="grading-entry bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
         >
           <div class="flex items-center justify-between mb-2">
@@ -297,7 +297,7 @@ const formatRoleName = (role: string): string => {
   return roleNames[role] || role;
 };
 
-const formatDate = (date: Date): string => {
+const formatDate = (date: Date | string): string => {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
