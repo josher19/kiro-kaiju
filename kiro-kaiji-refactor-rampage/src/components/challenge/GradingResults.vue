@@ -110,7 +110,7 @@
     </div>
 
     <!-- Overall Feedback -->
-    <div class="mb-8">
+    <div class="mb-6">
       <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
         Overall Feedback
       </h4>
@@ -121,13 +121,35 @@
       </div>
     </div>
 
+    <!-- Auto-navigation Notice -->
+    <div v-if="props.autoNavigateCountdown > 0" class="mb-8 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="text-blue-500 dark:text-blue-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="text-sm text-blue-800 dark:text-blue-200">
+            <strong>Great job!</strong> Your progress has been saved. Navigating to Progress page in <strong>{{ props.autoNavigateCountdown }}</strong> seconds...
+          </div>
+        </div>
+        <button
+          @click="$emit('cancel-auto-navigate')"
+          class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+
     <!-- Action Buttons -->
     <div class="flex flex-col sm:flex-row gap-3">
       <button
         @click="$emit('save-to-history')"
         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
       >
-        Save to Progress History
+        View My Progress
       </button>
       <button
         @click="$emit('view-history')"
@@ -152,14 +174,18 @@ import { GradingRole } from '@/types/api';
 
 interface Props {
   results: AIGradingResponse;
+  autoNavigateCountdown?: number;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  autoNavigateCountdown: 0
+});
 
 defineEmits<{
   close: [];
   'save-to-history': [];
   'view-history': [];
+  'cancel-auto-navigate': [];
 }>();
 
 // State for expandable detailed analysis

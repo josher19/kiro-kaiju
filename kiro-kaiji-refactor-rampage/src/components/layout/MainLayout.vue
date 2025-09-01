@@ -382,9 +382,11 @@
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <GradingResults
           :results="gradingResults"
-          @close="showGradingResults = false"
+          :auto-navigate-countdown="autoNavigateCountdown"
+          @close="() => { cancelAutoNavigate(); showGradingResults = false; }"
           @save-to-history="handleSaveGradingToHistory"
           @view-history="handleViewGradingHistory"
+          @cancel-auto-navigate="cancelAutoNavigate"
         />
       </div>
     </div>
@@ -444,6 +446,8 @@ const isGradingInProgress = ref(false)
 const gradingResults = ref<AIGradingResponse | null>(null)
 const showGradingResults = ref(false)
 const currentAchievement = ref<any>(null)
+const autoNavigateCountdown = ref(0)
+let autoNavigateTimer: number | null = null
 
 // Navigation configuration
 const navigationViews = [
@@ -575,10 +579,13 @@ const handleSubmitForGrading = async () => {
         }
       }
       
-      // Store grading results and show modal
+      // Store grading results and show modal briefly, then navigate to progress
       gradingResults.value = result
       showGradingResults.value = true
       console.log('Grading completed successfully:', result)
+      
+      // Start countdown for auto-navigation
+      startAutoNavigateCountdown()
     } else {
       appStore.setError(result.error || 'Failed to grade code')
     }
@@ -593,11 +600,9 @@ const handleSubmitForGrading = async () => {
 
 const handleSaveGradingToHistory = () => {
   // The grading service already saves to history automatically
-  // This is just for user feedback
+  // Navigate to progress page to show the saved results
   showGradingResults.value = false
-  
-  // Show success message instead of error
-  appStore.setLoading(false)
+  navigateToView('progress')
   console.log('Grading results saved to your progress history!')
 }
 
@@ -609,6 +614,29 @@ const handleViewGradingHistory = () => {
 
 const handleAchievementClose = () => {
   currentAchievement.value = null
+}
+
+const startAutoNavigateCountdown = () => {
+  autoNavigateCountdown.value = 5 // 5 second countdown
+  
+  autoNavigateTimer = setInterval(() => {
+    autoNavigateCountdown.value--
+    
+    if (autoNavigateCountdown.value <= 0) {
+      clearInterval(autoNavigateTimer!)
+      autoNavigateTimer = null
+      showGradingResults.value = false
+      navigateToView('progress')
+    }
+  }, 1000) as unknown as number
+}
+
+const cancelAutoNavigate = () => {
+  if (autoNavigateTimer) {
+    clearInterval(autoNavigateTimer)
+    autoNavigateTimer = null
+    autoNavigateCountdown.value = 0
+  }
 }
 
 const handleResize = () => {
@@ -673,6 +701,11 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   document.removeEventListener('touchstart', handleTouchStart)
   document.removeEventListener('touchend', handleTouchEnd)
+  
+  // Clean up auto-navigate timer
+  if (autoNavigateTimer) {
+    clearInterval(autoNavigateTimer)
+  }
 })
 
 // Watch for challenge changes
