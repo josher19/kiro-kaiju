@@ -102,9 +102,12 @@
   - Write comprehensive tests for AI grading service and unified role-based evaluation
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
 
-- [x] 11. Implement User Progress Tracking
+- [x] 11. Implement (of Update) User Progress Tracking
   - Create UserProgress Pinia store for state management
   - Build progress profile creation and statistics tracking
+  - Progress will be tracked after user clicks "Submit Code for Grading" from previous Task
+  - Fix "Submit Code for Grading" error handling to properly handle successful grading responses
+  - Ensure grading results are properly processed and stored when grading is successful
   - Implement achievement system with badge unlocking
   - Create difficulty level progression logic
   - Add milestone tracking and encouraging feedback
@@ -123,7 +126,7 @@
 
 - [x] 13. Integrate Local Mode with Kiro IDE
   - Create file system integration for local code modification
-  - Implement direct Kiro AI integration for local mode
+  - Implement direct AI integration for local mode
   - Build local challenge submission and evaluation workflow
   - Add real-time file watching and synchronization
   - Write integration tests for Kiro IDE functionality
@@ -194,7 +197,20 @@
   - Write tests for image display logic and transitions
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 20. Optimize Performance and Accessibility
+- [ ] 20. Implement Markdown to HTML Rendering for AI Messages
+  - Create markdown rendering service for AI Assistant and Zoom-a-Friend messages
+  - Implement HTML sanitization to prevent XSS attacks while allowing safe formatting
+  - Add support for code blocks with syntax highlighting
+  - Support inline code, bold/italic text, lists, links, and headers
+  - Configure external links to open in new tabs for security
+  - Update AI Chat Interface component to render markdown content as HTML
+  - Update Zoom-a-Friend Panel component to render markdown content as HTML
+  - Ensure grading responses remain as JSON format (not converted to HTML)
+  - Update UI labels to display "AI Assistant" instead of "Kiro AI Assistant" and "Ask AI for help" instead of "Ask Kiro AI for help"
+  - Write tests for markdown rendering, HTML sanitization, and security measures
+  - _Requirements: 3.7, 4.7_
+
+- [ ] 21. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -203,7 +219,7 @@
   - Write performance tests and accessibility audits
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 21. Create End-to-End Testing Suite
+- [x] 22. Create End-to-End Testing Suite
   - Write E2E tests for complete challenge workflow
   - Test mobile responsiveness across different devices
   - Verify AI integration and Zoom-a-Friend functionality

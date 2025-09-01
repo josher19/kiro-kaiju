@@ -23,7 +23,7 @@ graph TB
     D --> J[Test Runner]
     
     E --> K{AI Provider Selection}
-    K --> L[AI API]
+    K --> L[ AI API]
     K --> M[Local LLM - LLM Studio]
     K --> N[Remote LLM - OpenRouter]
     
@@ -224,6 +224,11 @@ interface AIChatInterface {
   autoScrollBehavior: 'smooth' | 'instant'; // Auto-scroll to bottom at reading speed
   scrollSpeed: number; // Average reading speed for smooth scrolling
   markdownToHtml: boolean; // Convert Markdown format to HTML for AI Assistant messages (Requirement 3.7)
+  uiLabels: {
+    assistantName: 'AI Assistant'; // Display "AI Assistant" instead of "Kiro AI Assistant"
+    helpButtonText: 'Ask AI for help'; // Display "Ask AI for help" instead of "Ask Kiro AI for help"
+    chatTitle: 'AI'; // Display "AI" in chat interface
+  };
 }
 
 interface AIServiceConfig {

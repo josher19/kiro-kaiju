@@ -14,7 +14,7 @@ import type {
   EvaluationResult,
   UserPreferences 
 } from '@/types/user';
-import type { GradingHistoryEntry } from '@/types/api';
+import type { GradingHistoryEntry, GradingRole, RoleEvaluation } from '@/types/api';
 import { KaijuType } from '@/types/kaiju';
 import { DifficultyLevel, ChallengeCategory } from '@/types/challenge';
 
@@ -434,7 +434,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
       const historyEntry: GradingHistoryEntry = {
         challengeId: gradingResponse.challengeId,
         gradingTimestamp: new Date(gradingResponse.gradingTimestamp),
-        roleScores: {},
+        roleScores: {} as Record<GradingRole, number>,
         averageScore: gradingResponse.averageScore,
         modelsUsed: [gradingResponse.roleEvaluations[0]?.modelUsed || 'unknown'],
         challengeType: 'refactoring', // Default type
@@ -442,7 +442,7 @@ export const useUserProgressStore = defineStore('userProgress', () => {
       };
 
       // Extract role scores from evaluations
-      gradingResponse.roleEvaluations.forEach((evaluation: any) => {
+      gradingResponse.roleEvaluations.forEach((evaluation: RoleEvaluation) => {
         historyEntry.roleScores[evaluation.role] = evaluation.score;
       });
 
