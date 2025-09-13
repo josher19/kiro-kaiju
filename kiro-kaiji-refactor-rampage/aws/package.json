@@ -1,6 +1,7 @@
 {
   "name": "kiro-kaiju-aws-backend",
   "version": "1.0.0",
+  "license": "AGPL-3.0",
   "description": "AWS Lambda backend for Kiro Kaiji Refactor Rampage",
   "main": "index.js",
   "scripts": {

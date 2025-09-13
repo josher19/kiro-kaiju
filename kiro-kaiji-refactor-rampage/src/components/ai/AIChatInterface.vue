@@ -7,7 +7,7 @@
           <span class="text-white text-sm font-bold">AI</span>
         </div>
         <div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">Kiro AI Assistant</h3>
+          <h3 class="font-semibold text-gray-900 dark:text-white">AI Assistant</h3>
           <p class="text-xs text-gray-500 dark:text-gray-400">
             {{ isConnected ? 'Ready to help' : 'Connecting...' }}
           </p>
@@ -62,7 +62,10 @@
               : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
           ]"
         >
-          <div class="whitespace-pre-wrap break-words">{{ message.content }}</div>
+          <div 
+            class="markdown-content whitespace-pre-wrap break-words"
+            v-html="renderMessageContent(message.content, message.role === 'assistant')"
+          ></div>
           <div
             :class="[
               'text-xs mt-1 opacity-70',
@@ -83,7 +86,7 @@
               <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
               <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
             </div>
-            <span class="text-sm text-gray-600 dark:text-gray-400">Kiro AI is thinking...</span>
+            <span class="text-sm text-gray-600 dark:text-gray-400">AI is thinking...</span>
           </div>
         </div>
       </div>
@@ -116,7 +119,7 @@
             v-model="currentMessage"
             @keydown="handleKeyDown"
             @input="handleInput"
-            placeholder="Ask Kiro AI for help with refactoring, testing, or implementing features..."
+            placeholder="Ask AI for help with refactoring, testing, or implementing features..."
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             rows="1"
             :disabled="isLoading"
@@ -167,6 +170,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue';
 import type { AIChatMessage } from '@/types/api';
 import type { ChallengeContext } from '@/types/challenge';
 import { getAIService } from '@/services/aiService';
+import { renderMessageContent } from '@/services/markdownService';
 
 interface Props {
   challengeContext: ChallengeContext;

@@ -107,6 +107,7 @@
   - Build progress profile creation and statistics tracking
   - Progress will be tracked after user clicks "Submit Code for Grading" from previous Task
   - Fix "Submit Code for Grading" error handling to properly handle successful grading responses
+  - Go to the Progress page when Grade is successfully submitted so user can see their progress
   - Ensure grading results are properly processed and stored when grading is successful
   - Implement achievement system with badge unlocking
   - Create difficulty level progression logic
@@ -197,7 +198,7 @@
   - Write tests for image display logic and transitions
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 20. Implement Markdown to HTML Rendering for AI Messages
+- [x] 20. Implement Markdown to HTML Rendering for AI Messages
   - Create markdown rendering service for AI Assistant and Zoom-a-Friend messages
   - Implement HTML sanitization to prevent XSS attacks while allowing safe formatting
   - Add support for code blocks with syntax highlighting

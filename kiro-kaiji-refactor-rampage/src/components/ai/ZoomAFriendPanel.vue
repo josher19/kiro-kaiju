@@ -70,11 +70,12 @@
                   {{ formatTime(message.timestamp) }}
                 </span>
               </div>
-              <div class="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                {{ message.message }}
-              </div>
-              <div v-if="message.advice" class="text-sm text-blue-600 dark:text-blue-400 italic">
-                💡 {{ message.advice }}
+              <div 
+                class="markdown-content text-sm text-gray-700 dark:text-gray-300 mb-2"
+                v-html="renderMessageContent(message.message, true)"
+              ></div>
+              <div v-if="message.advice" class="markdown-content text-sm text-blue-600 dark:text-blue-400 italic">
+                💡 <span v-html="renderMessageContent(message.advice, true)"></span>
               </div>
               <div v-if="message.keyTerms.length" class="flex flex-wrap gap-1 mt-2">
                 <span
@@ -149,6 +150,7 @@ import { useAppStore } from '@/stores/appStore'
 import { TeamRole, AnimalAvatar, TEAM_MEMBERS } from '@/types/team'
 import type { TeamMember, DialogResponse, ZoomSession, DialogContext, CodeComment } from '@/types/team'
 import { getZoomAFriendService } from '@/services/zoomAFriendService'
+import { renderMessageContent } from '@/services/markdownService'
 
 interface Props {
   challengeId: string
