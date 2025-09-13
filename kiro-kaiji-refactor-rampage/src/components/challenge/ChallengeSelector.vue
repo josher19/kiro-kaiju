@@ -75,6 +75,7 @@
         </label>
         <select
           id="language"
+          data-testid="language-select"
           v-model="selectedLanguage"
           @change="handleLanguageChange"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -97,6 +98,7 @@
         </label>
         <select
           id="framework"
+          data-testid="framework-select"
           v-model="selectedFramework"
           :disabled="!selectedLanguage || (availableFrameworks || []).length === 0"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
@@ -122,6 +124,7 @@
         </label>
         <select
           id="category"
+          data-testid="category-select"
           v-model="selectedCategory"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         >
@@ -143,6 +146,7 @@
         </label>
         <select
           id="difficulty"
+          data-testid="difficulty-select"
           v-model="selectedDifficulty"
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         >
@@ -166,6 +170,7 @@
       <div class="form-actions">
         <button
           type="submit"
+          data-testid="generate-challenge-btn"
           :disabled="!canGenerate"
           class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >

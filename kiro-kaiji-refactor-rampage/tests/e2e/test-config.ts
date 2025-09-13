@@ -332,10 +332,10 @@ function complexNestedFunction(a, b, c, d, e) {
   },
 
   challengeConfigs: [
-    { language: 'javascript', framework: 'vue', category: 'refactoring', difficulty: 'beginner' },
-    { language: 'javascript', framework: 'react', category: 'debugging', difficulty: 'intermediate' },
+    { language: 'javascript', framework: 'vue', category: 'refactoring', difficulty: '1' },
+    { language: 'javascript', framework: 'react', category: 'debugging', difficulty: '2' },
     { language: 'python', category: 'optimization', difficulty: 'advanced' },
-    { language: 'java', category: 'design-patterns', difficulty: 'intermediate' },
+    { language: 'java', category: 'design-patterns', difficulty: '2' },
     { language: 'typescript', framework: 'angular', category: 'testing', difficulty: 'advanced' }
   ]
 };
@@ -461,7 +461,7 @@ export const MOCK_API_RESPONSES: MockApiResponses = {
       },
       improvementTrend: [75, 82, 85, 88]
     },
-    unlockedDifficulties: ['beginner', 'intermediate'],
+    unlockedDifficulties: ['1', '2'],
     createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
     updatedAt: new Date().toISOString()
   }

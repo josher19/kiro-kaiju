@@ -28,7 +28,7 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           // Select options
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           
           // Verify generate button is enabled
           await expect(page.locator('[data-testid="generate-challenge-btn"]')).toBeEnabled();
@@ -138,8 +138,8 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           await expect(categorySelect).toHaveValue('debugging');
           
           const difficultySelect = page.locator('[data-testid="difficulty-select"]');
-          await difficultySelect.selectOption('intermediate');
-          await expect(difficultySelect).toHaveValue('intermediate');
+          await difficultySelect.selectOption('2');
+          await expect(difficultySelect).toHaveValue('2');
         });
 
         await test.step('Test button interactions', async () => {
@@ -184,7 +184,7 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           // Generate challenge first
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           await page.click('[data-testid="generate-challenge-btn"]');
           
           await page.waitForSelector('.monaco-editor', { timeout: 10000 });
@@ -271,7 +271,7 @@ test.describe('Cross-Browser Compatibility Tests', () => {
           // Try to generate challenge
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           await page.click('[data-testid="generate-challenge-btn"]');
           
           // Verify error handling
@@ -361,7 +361,7 @@ test.describe('Cross-Browser Compatibility Tests', () => {
         
         await page.selectOption('[data-testid="language-select"]', 'javascript');
         await page.selectOption('[data-testid="category-select"]', 'refactoring');
-        await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+        await page.selectOption('[data-testid="difficulty-select"]', '1');
         await page.click('[data-testid="generate-challenge-btn"]');
         
         await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 15000 });

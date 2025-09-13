@@ -21,7 +21,7 @@ test.describe('Complete Challenge Workflow', () => {
       await page.selectOption('[data-testid="category-select"]', 'refactoring');
       
       // Select difficulty
-      await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+      await page.selectOption('[data-testid="difficulty-select"]', '1');
       
       // Verify Generate Challenge button is enabled
       await expect(page.locator('[data-testid="generate-challenge-btn"]')).toBeEnabled();
@@ -145,7 +145,7 @@ test.describe('Complete Challenge Workflow', () => {
       // Try to generate challenge
       await page.selectOption('[data-testid="language-select"]', 'javascript');
       await page.selectOption('[data-testid="category-select"]', 'refactoring');
-      await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+      await page.selectOption('[data-testid="difficulty-select"]', '1');
       await page.click('[data-testid="generate-challenge-btn"]');
       
       // Verify error message is displayed

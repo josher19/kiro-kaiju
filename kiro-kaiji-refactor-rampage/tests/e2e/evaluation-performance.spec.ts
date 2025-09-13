@@ -7,7 +7,7 @@ test.describe('Evaluation System and Performance Tests', () => {
     // Generate a challenge for evaluation testing
     await page.selectOption('[data-testid="language-select"]', 'javascript');
     await page.selectOption('[data-testid="category-select"]', 'refactoring');
-    await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+    await page.selectOption('[data-testid="difficulty-select"]', '1');
     await page.click('[data-testid="generate-challenge-btn"]');
     
     await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 10000 });
@@ -259,7 +259,7 @@ module.exports = { factorial };
         
         // Generate multiple challenges and measure time
         const languages = ['javascript', 'python', 'java'];
-        const difficulties = ['beginner', 'intermediate', 'advanced'];
+        const difficulties = ['1', '2', 'advanced'];
         
         for (const language of languages) {
           for (const difficulty of difficulties) {
@@ -299,7 +299,7 @@ module.exports = { factorial };
         // Generate challenge to trigger editor loading
         await page.selectOption('[data-testid="language-select"]', 'javascript');
         await page.selectOption('[data-testid="category-select"]', 'refactoring');
-        await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+        await page.selectOption('[data-testid="difficulty-select"]', '1');
         await page.click('[data-testid="generate-challenge-btn"]');
         
         // Wait for Monaco editor to be fully loaded and interactive
@@ -477,7 +477,7 @@ function generatedFunction${i}(param1, param2, param3) {
         for (let i = 0; i < 5; i++) {
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           await page.click('[data-testid="generate-challenge-btn"]');
           
           await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 10000 });

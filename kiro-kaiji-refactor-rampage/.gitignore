@@ -30,3 +30,4 @@ coverage
 *.tsbuildinfo
 .env
 aws/.dynamodb
+test-results

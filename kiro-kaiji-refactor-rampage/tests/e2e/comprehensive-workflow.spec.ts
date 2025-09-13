@@ -12,7 +12,7 @@ test.describe('Comprehensive Application Workflow', () => {
   test('should complete full application workflow with performance monitoring', async ({ page }) => {
     await test.step('Initialize and generate challenge', async () => {
       await helpers.measurePerformance(async () => {
-        await helpers.generateBasicChallenge('javascript', 'refactoring', 'intermediate');
+        await helpers.generateBasicChallenge('javascript', 'refactoring', '2');
       }, 'Challenge Generation');
 
       // Verify all challenge elements are present
@@ -139,7 +139,7 @@ test.describe('Comprehensive Application Workflow', () => {
       
       await page.selectOption('[data-testid="language-select"]', 'javascript');
       await page.selectOption('[data-testid="category-select"]', 'refactoring');
-      await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+      await page.selectOption('[data-testid="difficulty-select"]', '1');
       await page.click('[data-testid="generate-challenge-btn"]');
       
       // Verify error handling
@@ -174,7 +174,7 @@ test.describe('Comprehensive Application Workflow', () => {
         
         await page.selectOption('[data-testid="language-select"]', language);
         await page.selectOption('[data-testid="category-select"]', 'refactoring');
-        await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+        await page.selectOption('[data-testid="difficulty-select"]', '1');
         await page.click('[data-testid="generate-challenge-btn"]');
         
         await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 15000 });
@@ -216,8 +216,8 @@ test.describe('Comprehensive Application Workflow', () => {
 
   test('should work correctly across different challenge types', async ({ page }) => {
     const challengeTypes = [
-      { language: 'javascript', category: 'refactoring', difficulty: 'beginner' },
-      { language: 'python', category: 'debugging', difficulty: 'intermediate' },
+      { language: 'javascript', category: 'refactoring', difficulty: '1' },
+      { language: 'python', category: 'debugging', difficulty: '2' },
       { language: 'java', category: 'optimization', difficulty: 'advanced' }
     ];
 

@@ -20,7 +20,7 @@ export class TestHelpers {
   async generateBasicChallenge(
     language = 'javascript',
     category = 'refactoring',
-    difficulty = 'beginner'
+    difficulty = '1'
   ) {
     await this.page.selectOption(getSelector('languageSelect'), language);
     await this.page.selectOption(getSelector('categorySelect'), category);

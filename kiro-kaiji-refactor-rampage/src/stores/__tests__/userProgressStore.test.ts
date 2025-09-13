@@ -709,7 +709,7 @@ describe('User Progress Store', () => {
           currentStreak: 0,
           longestStreak: 0
         },
-        unlockedDifficulties: ['beginner'],
+        unlockedDifficulties: ['1'],
         unlockedKaiju: ['hydra-bug'],
         preferences: {
           theme: 'light',

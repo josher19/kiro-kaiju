@@ -178,17 +178,18 @@
   - Use minimal amount of AWS services and code to fullfill this Task
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
 
-- [ ] 18. Implement AWS Cost Management and Budget Controls
+- [x] 18. Implement AWS Cost Management and Budget Controls
   - Create AWS cost management service with configurable spending limits (default: $15/month)
   - Implement CloudWatch cost monitoring and alert system with thresholds at 50%, 80%, and 95% of budget
   - Build budget enforcement logic that prevents new API calls when budget is exceeded
   - Create automatic service shutdown mechanism when budget limit is reached
   - Implement cost-aware AI model selection to prioritize free-tier and low-cost options
-  - Add user notification system for budget alerts and cost status
-  - Create admin dashboard for cost tracking and budget management
+  - Add user notification system for budget alerts and cost status using SNS
+  - Create a JSON config file for budget management
   - Implement graceful degradation to local mode when AWS budget is exceeded
-  - Add cost optimization strategies for Lambda, DynamoDB, and AI service usage
-  - Write unit tests for cost management logic and budget enforcement
+  - Front-end should fail over to Local Mode or require an OpenRouter API key to continue if user click "Cloud"
+  - Add cost optimization strategies for AI service usage
+  - Write basic unit tests for cost management logic and budget enforcement
   - _Requirements: 9.6, plus cost management requirements from design document_
 
 - [x] 19. Add Error Handling and Offline Support

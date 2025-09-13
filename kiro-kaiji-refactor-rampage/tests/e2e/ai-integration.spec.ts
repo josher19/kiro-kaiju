@@ -7,7 +7,7 @@ test.describe('AI Integration and Zoom-a-Friend Tests', () => {
     // Generate a challenge to have context for AI interactions
     await page.selectOption('[data-testid="language-select"]', 'javascript');
     await page.selectOption('[data-testid="category-select"]', 'refactoring');
-    await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+    await page.selectOption('[data-testid="difficulty-select"]', '1');
     await page.click('[data-testid="generate-challenge-btn"]');
     
     await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 10000 });

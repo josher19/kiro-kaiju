@@ -48,7 +48,7 @@ test.describe('Mobile Responsiveness Tests', () => {
           // Generate a challenge first
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           await page.click('[data-testid="generate-challenge-btn"]');
           
           // Wait for challenge to load
@@ -125,7 +125,7 @@ test.describe('Mobile Responsiveness Tests', () => {
           // Run abbreviated version of main workflow
           await page.selectOption('[data-testid="language-select"]', 'javascript');
           await page.selectOption('[data-testid="category-select"]', 'refactoring');
-          await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+          await page.selectOption('[data-testid="difficulty-select"]', '1');
           await page.click('[data-testid="generate-challenge-btn"]');
           
           // Wait for challenge
@@ -151,7 +151,7 @@ test.describe('Mobile Responsiveness Tests', () => {
             // Generate challenge to test editor in landscape
             await page.selectOption('[data-testid="language-select"]', 'javascript');
             await page.selectOption('[data-testid="category-select"]', 'refactoring');
-            await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+            await page.selectOption('[data-testid="difficulty-select"]', '1');
             await page.click('[data-testid="generate-challenge-btn"]');
             
             await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 10000 });
@@ -182,7 +182,7 @@ test.describe('Mobile Responsiveness Tests', () => {
       await test.step('Test long press interactions', async () => {
         // Generate challenge first
         await page.selectOption('[data-testid="category-select"]', 'refactoring');
-        await page.selectOption('[data-testid="difficulty-select"]', 'beginner');
+        await page.selectOption('[data-testid="difficulty-select"]', '1');
         await page.click('[data-testid="generate-challenge-btn"]');
         
         await page.waitForSelector('[data-testid="challenge-container"]', { timeout: 10000 });
