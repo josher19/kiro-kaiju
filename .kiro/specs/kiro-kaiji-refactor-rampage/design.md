@@ -67,10 +67,11 @@ graph TB
 #### AWS Cloud Mode with Flexible AI Provider Options
 - **Infrastructure**: AWS Lambda functions for serverless backend services
 - **Storage**: AWS DynamoDB for user progress and challenge data
+- **Cost Management**: Configurable spending limits with default $15/month budget
 - **AI Provider Options**:
   - **Local LLM**: OpenAI-compatible endpoint (default: http://localhost:1234/v1) using LLM Studio or similar
   - **Remote LLM**: OpenRouter API with preferred models (openai/gpt-oss-20b, Claude, other coding-focused models)
-- **Benefits**: Scalable, multi-user support, persistent data storage, flexible AI provider options
+- **Benefits**: Scalable, multi-user support, persistent data storage, flexible AI provider options, cost-controlled deployment
 
 ### AI Provider Selection Strategy
 
@@ -108,6 +109,12 @@ interface RemoteLLMConfig {
     quotaManagement: boolean;
     costTracking: boolean;
     costAwareModelSelection: boolean; // Cost-aware model selection for free tier (Requirement 9.6)
+  };
+  budgetManagement: {
+    monthlyBudgetLimit: number; // Default: $15/month spending limit
+    costAlerts: boolean; // Alert when approaching budget limits
+    automaticShutoff: boolean; // Stop services when budget exceeded
+    budgetTracking: 'daily' | 'weekly' | 'monthly'; // Budget monitoring frequency
   };
 }
 ```
@@ -673,6 +680,7 @@ interface ZoomAFriendService {
 3. **Generation Errors**: Challenge creation failures, AI service unavailable
 4. **Evaluation Errors**: Code compilation failures, test execution errors
 5. **AI Provider Errors**: Local LLM unreachable, remote model unavailable, quota exceeded (Requirement 9.5, 9.4)
+6. **Budget Errors**: AWS spending limits exceeded, cost alerts triggered
 
 ### Error Handling Strategy
 ```typescript
@@ -712,7 +720,17 @@ class ErrorHandler {
         // Implement request delay and quota management
         this.handleQuotaExceeded();
         break;
+      case 'budget-exceeded':
+        // AWS spending limit reached - disable services and notify user
+        this.handleBudgetExceeded();
+        break;
     }
+  }
+  
+  static handleBudgetExceeded(): void {
+    // Disable AWS services when monthly budget limit is reached
+    // Provide clear notification to user about budget status
+    // Offer options to increase budget or switch to local mode
   }
 }
 ```
@@ -747,6 +765,67 @@ class ErrorHandler {
 - Cross-browser compatibility testing
 - Mobile touch interaction testing
 - Kaiju animation performance testing
+
+## AWS Cost Management System
+
+### Budget Control Architecture
+The AWS deployment includes comprehensive cost management to ensure spending stays within configurable limits.
+
+#### Cost Management Configuration
+```typescript
+interface AWSCostManagement {
+  budgetSettings: {
+    monthlyLimit: number; // Default: $15/month
+    alertThresholds: [50, 80, 95]; // Percentage thresholds for alerts
+    automaticShutoff: boolean; // Stop services when budget exceeded
+    gracePeriod: number; // Hours before automatic shutoff after budget exceeded
+  };
+  
+  costTracking: {
+    services: ['lambda', 'dynamodb', 'bedrock', 'apigateway'];
+    granularity: 'daily' | 'hourly';
+    reportingFrequency: 'daily' | 'weekly';
+    costBreakdown: boolean; // Track costs by service and feature
+  };
+  
+  budgetEnforcement: {
+    preventNewRequests: boolean; // Block new API calls when budget exceeded
+    degradeToLocalMode: boolean; // Automatically switch to local LLM when budget reached
+    userNotifications: boolean; // Send budget alerts to users
+    adminNotifications: boolean; // Send budget alerts to administrators
+  };
+}
+```
+
+#### Cost Optimization Strategies
+- **Lambda Functions**: Use ARM-based processors for cost efficiency
+- **DynamoDB**: On-demand pricing with auto-scaling to minimize costs
+- **AI Services**: Prefer free-tier models and implement request batching
+- **API Gateway**: Optimize request routing to reduce invocation costs
+- **Monitoring**: AWS CloudWatch for real-time cost tracking and alerts
+
+#### Budget Alert System
+```typescript
+interface BudgetAlert {
+  threshold: number; // Percentage of budget consumed
+  alertType: 'email' | 'in-app' | 'webhook';
+  message: string;
+  actionRequired: boolean;
+  suggestedActions: string[]; // Recommendations to reduce costs
+}
+
+interface BudgetEnforcement {
+  softLimit: number; // 80% - Show warnings and suggestions
+  hardLimit: number; // 100% - Disable AWS services, switch to local mode
+  emergencyShutoff: boolean; // Immediate service shutdown at 110% budget
+}
+```
+
+#### Cost-Aware Feature Design
+- **Challenge Generation**: Cache generated challenges to reduce AI API calls
+- **Evaluation**: Use local evaluation when possible, AI evaluation for premium features
+- **Progress Tracking**: Store data efficiently in DynamoDB with minimal read/write operations
+- **User Sessions**: Implement session management to reduce authentication overhead
 
 ## Message Rendering System
 

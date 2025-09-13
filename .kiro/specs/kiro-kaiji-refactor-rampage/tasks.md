@@ -178,7 +178,20 @@
   - Use minimal amount of AWS services and code to fullfill this Task
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
 
-- [x] 18. Add Error Handling and Offline Support
+- [ ] 18. Implement AWS Cost Management and Budget Controls
+  - Create AWS cost management service with configurable spending limits (default: $15/month)
+  - Implement CloudWatch cost monitoring and alert system with thresholds at 50%, 80%, and 95% of budget
+  - Build budget enforcement logic that prevents new API calls when budget is exceeded
+  - Create automatic service shutdown mechanism when budget limit is reached
+  - Implement cost-aware AI model selection to prioritize free-tier and low-cost options
+  - Add user notification system for budget alerts and cost status
+  - Create admin dashboard for cost tracking and budget management
+  - Implement graceful degradation to local mode when AWS budget is exceeded
+  - Add cost optimization strategies for Lambda, DynamoDB, and AI service usage
+  - Write unit tests for cost management logic and budget enforcement
+  - _Requirements: 9.6, plus cost management requirements from design document_
+
+- [x] 19. Add Error Handling and Offline Support
   - Implement comprehensive error handling with user-friendly messages
   - Create offline mode with cached challenges and local storage
   - Add network connectivity detection and graceful degradation
@@ -187,7 +200,7 @@
   - Write tests for error scenarios and offline functionality
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 19. Implement Visual Display System
+- [x] 20. Implement Visual Display System
   - Create visual display component positioned in left sidebar between Progress link and Deployment Mode chooser
   - Implement Kaiju image display when challenge is first selected (from src/assets/images/kaiju/)
   - Implement team member image display when Zoom-a-Friend is clicked (from src/assets/images/team/${TeamRole}_sm.png)
@@ -198,7 +211,7 @@
   - Write tests for image display logic and transitions
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [x] 20. Implement Markdown to HTML Rendering for AI Messages
+- [x] 21. Implement Markdown to HTML Rendering for AI Messages
   - Create markdown rendering service for AI Assistant and Zoom-a-Friend messages
   - Implement HTML sanitization to prevent XSS attacks while allowing safe formatting
   - Add support for code blocks with syntax highlighting
@@ -211,7 +224,7 @@
   - Write tests for markdown rendering, HTML sanitization, and security measures
   - _Requirements: 3.7, 4.7_
 
-- [ ] 21. Optimize Performance and Accessibility
+- [ ] 22. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -220,7 +233,7 @@
   - Write performance tests and accessibility audits
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 22. Create End-to-End Testing Suite
+- [x] 23. Create End-to-End Testing Suite
   - Write E2E tests for complete challenge workflow
   - Test mobile responsiveness across different devices
   - Verify AI integration and Zoom-a-Friend functionality
