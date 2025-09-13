@@ -39,6 +39,20 @@ provider:
           Action:
             - bedrock:InvokeModel
           Resource: "*"
+        - Effect: Allow
+          Action:
+            - cloudwatch:PutMetricData
+            - cloudwatch:GetMetricStatistics
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource: "arn:aws:sns:${self:provider.region}:*:kiro-kaiju-budget-alerts"
+        - Effect: Allow
+          Action:
+            - ce:GetCostAndUsage
+            - ce:GetUsageReport
+          Resource: "*"
 
 functions:
   challengeGeneration:
@@ -101,6 +115,54 @@ functions:
           method: post
           cors: true
 
+  budgetStatus:
+    handler: src/handlers/budgetHandler.getBudgetStatus
+    events:
+      - http:
+          path: /api/budget/status
+          method: get
+          cors: true
+
+  budgetConstraints:
+    handler: src/handlers/budgetHandler.checkBudgetConstraints
+    events:
+      - http:
+          path: /api/budget/constraints
+          method: get
+          cors: true
+
+  costOptimizedModel:
+    handler: src/handlers/budgetHandler.getCostOptimizedModel
+    events:
+      - http:
+          path: /api/budget/model
+          method: post
+          cors: true
+
+  setupBudgetMonitoring:
+    handler: src/handlers/budgetHandler.setupBudgetMonitoring
+    events:
+      - http:
+          path: /api/budget/setup
+          method: post
+          cors: true
+
+  enforceBudgetConstraints:
+    handler: src/handlers/budgetHandler.enforceBudgetConstraints
+    events:
+      - http:
+          path: /api/budget/enforce
+          method: post
+          cors: true
+
+  costOptimizationStrategies:
+    handler: src/handlers/budgetHandler.getCostOptimizationStrategies
+    events:
+      - http:
+          path: /api/budget/strategies
+          method: get
+          cors: true
+
 resources:
   Resources:
     UserProgressTable:
@@ -118,6 +180,19 @@ resources:
           - AttributeName: challengeId
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
+
+    BudgetAlertsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: kiro-kaiju-budget-alerts
+        DisplayName: "Kiro Kaiju Budget Alerts"
+
+    BudgetAlertsSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: email
+        TopicArn: !Ref BudgetAlertsTopic
+        Endpoint: ${env:BUDGET_ALERT_EMAIL, 'admin@example.com'}
 
 plugins:
   - serverless-dynamodb-local

@@ -89,3 +89,46 @@ export interface AuthSession {
   expiresAt: string;
   createdAt: string;
 }
+
+// Cost Management Types
+export interface BudgetConfig {
+  monthlyLimit: number;
+  alertThresholds: number[];
+  automaticShutoff: boolean;
+  gracePeriodHours: number;
+  snsTopicArn?: string;
+  costOptimization: {
+    prioritizeFreeTier: boolean;
+    maxCostPerRequest: number;
+    preferredModels: string[];
+  };
+}
+
+export interface BudgetStatus {
+  currentSpending: number;
+  budgetLimit: number;
+  percentageUsed: number;
+  status: 'ok' | 'warning' | 'critical' | 'exceeded';
+  alertLevel: number;
+  remainingBudget: number;
+  isShutdownRequired: boolean;
+}
+
+export interface CostAlert {
+  timestamp: string;
+  alertLevel: number;
+  currentSpending: number;
+  budgetLimit: number;
+  percentageUsed: number;
+  message: string;
+  severity: 'info' | 'warning' | 'critical' | 'emergency';
+}
+
+export interface CostMetrics {
+  service: string;
+  dailySpending: number;
+  monthlySpending: number;
+  requestCount: number;
+  averageCostPerRequest: number;
+  timestamp: string;
+}

@@ -33,6 +33,11 @@ export const useAppStore = defineStore('app', () => {
   const kiroIntegrationEnabled = ref(false);
   const kiroConfig = ref<KiroIntegrationConfig>(defaultKiroConfig);
 
+  // Budget management state
+  const budgetExceeded = ref(false);
+  const budgetStatus = ref<any>(null);
+  const fallbackOptions = ref<any>(null);
+
   // Mobile panel states
   const isMobileMenuOpen = ref(false);
   const isAIPanelOpen = ref(false);
@@ -212,13 +217,39 @@ export const useAppStore = defineStore('app', () => {
     localStorage.setItem('kiro-kaiju-config', JSON.stringify(kiroConfig.value));
   };
 
+  // Budget management
+  const setBudgetExceeded = (exceeded: boolean, status?: any, options?: any) => {
+    budgetExceeded.value = exceeded;
+    budgetStatus.value = status;
+    fallbackOptions.value = options;
+    
+    if (exceeded) {
+      console.warn('AWS budget exceeded, switching to local mode');
+      // Automatically switch to local mode when budget is exceeded
+      setDeploymentMode('local');
+    }
+  };
+
+  const clearBudgetExceeded = () => {
+    budgetExceeded.value = false;
+    budgetStatus.value = null;
+    fallbackOptions.value = null;
+  };
+
+  const handleBudgetExceeded = (detail: any) => {
+    setBudgetExceeded(true, detail.budgetStatus, detail.fallbackOptions);
+    
+    // Show user notification
+    setError('AWS budget limit exceeded. Switching to local mode. You can continue using local LLM or provide an OpenRouter API key.');
+  };
+
   // Initialize AI service based on deployment mode
   const initializeAIService = async () => {
     try {
       const { createAIService } = await import('@/services/aiService');
       
-      if (deploymentMode.value === 'local') {
-        // Local mode - use Kiro IDE integration
+      if (deploymentMode.value === 'local' || budgetExceeded.value) {
+        // Local mode - use Kiro IDE integration or local LLM
         createAIService({
           mode: 'local'
         });
@@ -283,6 +314,17 @@ export const useAppStore = defineStore('app', () => {
         setTheme('auto'); // Re-apply auto theme
       }
     });
+
+    // Listen for budget exceeded events
+    window.addEventListener('kiro-budget-exceeded', (event: any) => {
+      handleBudgetExceeded(event.detail);
+    });
+
+    // Check if budget was previously exceeded
+    const { CloudService } = await import('@/services/cloudService');
+    if (CloudService.isBudgetExceeded()) {
+      setBudgetExceeded(true);
+    }
   };
 
   return {
@@ -300,6 +342,9 @@ export const useAppStore = defineStore('app', () => {
     isAIPanelOpen,
     isZoomPanelOpen,
     selectedTeamMember,
+    budgetExceeded,
+    budgetStatus,
+    fallbackOptions,
 
     // Computed
     isDarkMode,
@@ -323,6 +368,9 @@ export const useAppStore = defineStore('app', () => {
     closeMobilePanels,
     setSelectedTeamMember,
     clearSelectedTeamMember,
+    setBudgetExceeded,
+    clearBudgetExceeded,
+    handleBudgetExceeded,
     initializeApp
   };
 });

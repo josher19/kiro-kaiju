@@ -14,7 +14,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.450.0",
+    "@aws-sdk/client-cloudwatch": "^3.450.0",
+    "@aws-sdk/client-cost-explorer": "^3.450.0",
     "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/client-sns": "^3.450.0",
     "@aws-sdk/lib-dynamodb": "^3.450.0",
     "jsonwebtoken": "^9.0.2",
     "serverless-dynamodb-local": "^0.2.40",

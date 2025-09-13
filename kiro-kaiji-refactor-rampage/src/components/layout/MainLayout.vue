@@ -119,6 +119,11 @@
           </div>
         </div>
 
+        <!-- Budget Status -->
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+          <BudgetStatus />
+        </div>
+
         <!-- User Progress Summary -->
         <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
@@ -394,6 +399,12 @@
       :achievement="currentAchievement"
       @close="handleAchievementClose"
     />
+    
+    <!-- Budget Manager -->
+    <BudgetManager
+      v-if="deploymentMode === 'cloud'"
+      :cloud-service="cloudService"
+    />
   </div>
 </template>
 
@@ -411,6 +422,8 @@ import ProgressTracker from '@/components/progress/ProgressTracker.vue'
 import GradingResults from '@/components/challenge/GradingResults.vue'
 import VisualDisplay from '@/components/common/VisualDisplay.vue'
 import AchievementNotification from '@/components/progress/AchievementNotification.vue'
+import BudgetStatus from '@/components/common/BudgetStatus.vue'
+import BudgetManager from '@/components/common/BudgetManager.vue'
 import type { Challenge, ChallengeContext } from '@/types'
 import type { AIGradingResponse } from '@/types/api'
 import { ProgrammingLanguage } from '@/types'
@@ -444,6 +457,7 @@ const isGradingInProgress = ref(false)
 const gradingResults = ref<AIGradingResponse | null>(null)
 const showGradingResults = ref(false)
 const currentAchievement = ref<any>(null)
+const cloudService = ref<any>(null)
 
 // Navigation configuration
 const navigationViews = [
@@ -655,6 +669,18 @@ onMounted(async () => {
   window.addEventListener('resize', handleResize)
   document.addEventListener('touchstart', handleTouchStart, { passive: true })
   document.addEventListener('touchend', handleTouchEnd, { passive: true })
+  
+  // Initialize cloud service if in cloud mode
+  if (deploymentMode.value === 'cloud') {
+    try {
+      const { CloudService } = await import('@/services/cloudService')
+      cloudService.value = await CloudService.fromStoredSession(
+        process.env.VITE_API_BASE_URL || 'https://api.kiro-kaiju.com'
+      )
+    } catch (error) {
+      console.error('Failed to initialize cloud service:', error)
+    }
+  }
   
   // Initialize user progress
   appStore.setLoading(true, 'Initializing user progress...')

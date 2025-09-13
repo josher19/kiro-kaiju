@@ -1,8 +1,19 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { BedrockService } from '../services/bedrockService';
 import { authenticateRequest, createUnauthorizedResponse } from '../middleware/auth';
+import { budgetEnforcementMiddleware, recordCostMetrics } from './budgetHandler';
+import { CostManagementService } from '../services/costManagementService';
+const budgetConfig = require('../../budget-config.json');
 
 const bedrockService = new BedrockService();
+const costManagement = new CostManagementService({
+  monthlyBudgetLimit: budgetConfig.monthlyLimit,
+  alertThresholds: budgetConfig.alertThresholds,
+  snsTopicArn: process.env.SNS_TOPIC_ARN,
+  region: process.env.AWS_REGION || 'us-east-1',
+  automaticShutoff: budgetConfig.automaticShutoff,
+  gracePeriodHours: budgetConfig.gracePeriodHours
+});
 
 export const getModels = async (
   event: APIGatewayProxyEvent
@@ -69,7 +80,7 @@ export const chatCompletion = async (
       };
     }
 
-    const { messages, model, max_tokens, temperature } = JSON.parse(event.body);
+    const { messages, model, max_tokens = 2000, temperature = 0.7 } = JSON.parse(event.body);
 
     if (!messages || !Array.isArray(messages)) {
       return {
@@ -83,18 +94,47 @@ export const chatCompletion = async (
       };
     }
 
+    // Estimate cost for this request
+    const inputTokens = messages.reduce((sum: number, msg: any) => sum + (msg.content?.length || 0), 0);
+    const estimatedOutputTokens = Math.min(max_tokens, 1000); // Conservative estimate
+    const selectedModel = model || costManagement.getCostOptimizedModel(['anthropic.claude-3-haiku-20240307-v1:0']);
+    const estimatedCost = costManagement.estimateAIRequestCost(selectedModel, inputTokens, estimatedOutputTokens);
+
+    // Check budget constraints before processing
+    const budgetCheck = await budgetEnforcementMiddleware('ai-chat-completion', estimatedCost);
+    if (!budgetCheck.allowed) {
+      return {
+        statusCode: 429,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        },
+        body: JSON.stringify({
+          error: 'Budget limit exceeded',
+          reason: budgetCheck.reason,
+          fallbackOptions: budgetCheck.fallbackOptions
+        })
+      };
+    }
+
     // Add small delay to avoid quota issues
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Get response from Bedrock
-    const response = await bedrockService.chatCompletion(messages, model);
+    // Get response from Bedrock using cost-optimized model
+    const response = await bedrockService.chatCompletion(messages, selectedModel);
+
+    // Calculate actual cost and record metrics
+    const actualOutputTokens = response.length;
+    const actualCost = costManagement.estimateAIRequestCost(selectedModel, inputTokens, actualOutputTokens);
+    await recordCostMetrics('bedrock', 'chat-completion', actualCost);
 
     // Return in OpenAI-compatible format
     const completion = {
       id: `chatcmpl-${Date.now()}`,
       object: "chat.completion",
       created: Math.floor(Date.now() / 1000),
-      model: model || "anthropic.claude-3-haiku-20240307-v1:0",
+      model: selectedModel,
       choices: [
         {
           index: 0,
@@ -106,9 +146,9 @@ export const chatCompletion = async (
         }
       ],
       usage: {
-        prompt_tokens: messages.reduce((sum: number, msg: any) => sum + msg.content.length, 0),
-        completion_tokens: response.length,
-        total_tokens: messages.reduce((sum: number, msg: any) => sum + msg.content.length, 0) + response.length
+        prompt_tokens: inputTokens,
+        completion_tokens: actualOutputTokens,
+        total_tokens: inputTokens + actualOutputTokens
       }
     };
 

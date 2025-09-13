@@ -1,10 +1,11 @@
 {
   "extends": "./tsconfig.app.json",
-  "include": ["src/**/*.ts", "src/**/__tests__/*.test.ts", "env.d.ts"],
+  "include": ["src/**/*.ts", "src/**/__tests__/*.test.ts", "env.d.ts", "budget-config.json"],
   "exclude": [],
   "compilerOptions": {
     "esModuleInterop": true,
     "composite": true,
+    "resolveJsonModule": true,
     "types": ["node", "jest"]
   }
 }
