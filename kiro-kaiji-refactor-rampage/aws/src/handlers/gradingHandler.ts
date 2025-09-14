@@ -82,7 +82,7 @@ export const gradeCode = async (
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Grade code using Bedrock AI
-    const rawRoleScores = await bedrockService.gradeCode(submittedCode, requirements);
+    const rawRoleScores = await bedrockService.gradeCode(submittedCode, requirements, 300);
     
     // Record actual cost
     await recordCostMetrics('bedrock', 'code-grading', estimatedCost);

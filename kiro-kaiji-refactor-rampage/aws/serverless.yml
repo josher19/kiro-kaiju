@@ -18,7 +18,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs18.x
-  region: us-west-2
+  region: ${opt:region, 'us-west-2'}
   stage: ${opt:stage, 'dev'}
   environment:
     DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
@@ -38,7 +38,9 @@ provider:
         - Effect: Allow
           Action:
             - bedrock:InvokeModel
-          Resource: "*"
+          Resource:
+            - "arn:aws:bedrock:${self:provider.region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+            - "arn:aws:bedrock:${self:provider.region}::foundation-model/amazon.titan-text-lite-v1"
         - Effect: Allow
           Action:
             - cloudwatch:PutMetricData

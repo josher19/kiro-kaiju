@@ -250,8 +250,8 @@ Timestamp: ${new Date().toISOString()}
   getCostOptimizedModel(availableModels: string[]): string {
     // Prioritize free-tier and low-cost models
     const costPriority = [
-      'anthropic.claude-3-haiku-20240307-v1:0', // Lowest cost Claude model
       'amazon.titan-text-lite-v1',              // Amazon's lightweight model
+      'anthropic.claude-3-haiku-20240307-v1:0', // Lowest cost Claude model
       'meta.llama2-13b-chat-v1',               // Open source option
       'anthropic.claude-instant-v1',           // Faster, cheaper Claude
       'anthropic.claude-v2'                    // Standard Claude
@@ -273,10 +273,10 @@ Timestamp: ${new Date().toISOString()}
   estimateAIRequestCost(model: string, inputTokens: number, outputTokens: number): number {
     // Cost estimates per 1000 tokens (as of 2024)
     const modelCosts: Record<string, { input: number; output: number }> = {
+      'amazon.titan-text-lite-v1': { input: 0.0003, output: 0.0008 },
       'anthropic.claude-3-haiku-20240307-v1:0': { input: 0.00025, output: 0.00125 },
       'anthropic.claude-instant-v1': { input: 0.0008, output: 0.0024 },
       'anthropic.claude-v2': { input: 0.008, output: 0.024 },
-      'amazon.titan-text-lite-v1': { input: 0.0003, output: 0.0004 },
       'meta.llama2-13b-chat-v1': { input: 0.00075, output: 0.001 }
     };
 

@@ -100,6 +100,8 @@ export const chatCompletion = async (
     const selectedModel = model || costManagement.getCostOptimizedModel(['anthropic.claude-3-haiku-20240307-v1:0']);
     const estimatedCost = costManagement.estimateAIRequestCost(selectedModel, inputTokens, estimatedOutputTokens);
 
+    console.log('model', { model, selectedModel, max_tokens });
+
     // Check budget constraints before processing
     const budgetCheck = await budgetEnforcementMiddleware('ai-chat-completion', estimatedCost);
     if (!budgetCheck.allowed) {
@@ -122,7 +124,7 @@ export const chatCompletion = async (
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Get response from Bedrock using cost-optimized model
-    const response = await bedrockService.chatCompletion(messages, selectedModel);
+    const response = await bedrockService.chatCompletion(messages, selectedModel, max_tokens);
 
     // Calculate actual cost and record metrics
     const actualOutputTokens = response.length;

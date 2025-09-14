@@ -9,6 +9,7 @@
     "deploy:dev": "serverless deploy --stage dev",
     "deploy:prod": "serverless deploy --stage prod",
     "deploy:s3": "serverless --config serverless-s3.yml",
+    "sync": "serverless s3sync --config serverless-s3.yml",
     "offline": "serverless offline",
     "test": "jest",
     "test:watch": "jest --watch"

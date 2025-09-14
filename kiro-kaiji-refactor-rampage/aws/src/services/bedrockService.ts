@@ -17,22 +17,22 @@ export class BedrockService {
     return this.parseChallengeResponse(response);
   }
 
-  async gradeCode(code: string, requirements: string[]): Promise<Record<GradingRole, [number, string]>> {
+  async gradeCode(code: string, requirements: string[], max_tokens = 300): Promise<Record<GradingRole, [number, string]>> {
     const prompt = this.buildGradingPrompt(code, requirements);
     
-    const response = await this.invokeModel(prompt);
+    const response = await this.invokeModel(prompt, max_tokens);
     return this.parseGradingResponse(response);
   }
 
-  async chatCompletion(messages: any[], model?: string): Promise<string> {
+  async chatCompletion(messages: any[], model?: string, max_tokens = 2000): Promise<string> {
     const prompt = this.buildChatPrompt(messages);
-    return await this.invokeModel(prompt);
+    return await this.invokeModel(prompt, max_tokens);
   }
 
-  private async invokeModel(prompt: string): Promise<string> {
+  private async invokeModel(prompt: string, max_tokens = 2000): Promise<string> {
     const body = JSON.stringify({
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens: 2000,
+      max_tokens,
       messages: [
         {
           role: "user",
