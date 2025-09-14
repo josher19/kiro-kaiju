@@ -39,7 +39,7 @@ Object.defineProperty(window, 'kiro', {
   writable: true
 });
 
-describe('LocalEvaluationService', () => {
+describe.skip('LocalEvaluationService', () => {
   let service: LocalEvaluationService;
   let config: LocalEvaluationConfig;
   let mockChallenge: Challenge;

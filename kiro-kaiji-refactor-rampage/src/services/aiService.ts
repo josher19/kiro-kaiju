@@ -887,7 +887,7 @@ let aiServiceInstance: AIService | null = null;
 export function createAIService(config?: AIServiceConfig): AIService {
   // If no config provided, create from environment
   if (!config) {
-    // Default to AWS cloud mode
+    // Default to AWS cloud mode instead of Kiro
     config = {
       mode: 'cloud',
       provider: 'aws',

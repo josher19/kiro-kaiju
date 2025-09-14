@@ -254,7 +254,7 @@ export const useAppStore = defineStore('app', () => {
           mode: 'local'
         });
       } else {
-        // Cloud mode - use AWS by default
+        // Cloud mode - use AWS by default instead of OpenRouter
         createAIService({
           mode: 'cloud',
           provider: 'aws',
@@ -268,7 +268,7 @@ export const useAppStore = defineStore('app', () => {
         });
       }
       
-      console.log(`AI service initialized in ${deploymentMode.value} mode`);
+      console.log(`AI service initialized in ${deploymentMode.value} mode with AWS as default provider`);
     } catch (error) {
       console.error('Failed to initialize AI service:', error);
     }
@@ -289,7 +289,7 @@ export const useAppStore = defineStore('app', () => {
     if (savedMode && ['local', 'cloud'].includes(savedMode)) {
       await setDeploymentMode(savedMode);
     } else {
-      // Default to AWS cloud mode
+      // Default to AWS cloud mode instead of local
       await setDeploymentMode('cloud');
     }
 

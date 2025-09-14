@@ -1,221 +1,222 @@
 # Manual Test Plan for AWS Cloud Mode Services
 
 ## Overview
-This test plan covers manual testing for the AWS Cloud Mode Services integration that makes AWS the default AI provider instead of Kiro.
+This test plan covers manual testing for the AWS Cloud Mode Services implementation. The system now defaults to AWS instead of Kiro for cloud mode deployment.
 
-## Test Environment
-- AWS Backend URL: https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev
-- Frontend: Local development server (npm run dev)
+## Test Environment Setup
+- AWS backend services deployed to: https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev
+- Frontend application running locally
+- Browser with developer tools for network inspection
 
 ## Test Cases
 
-### 1. Initial Application Load
-**Objective**: Verify AWS is used as default AI provider
+### 1. Application Initialization
+**Objective**: Verify the application defaults to AWS cloud mode
 
 **Steps**:
 1. Clear browser localStorage
-2. Start the application (npm run dev)
-3. Open browser developer tools and check console logs
-4. Navigate to the application
+2. Open the application
+3. Check the deployment mode indicator in the sidebar
 
 **Expected Results**:
-- Console should show "AI service initialized in cloud mode"
-- No errors related to AI service initialization
-- Application loads successfully
+- Application should default to "Cloud" mode
+- Sidebar should show "☁️ Cloud" as selected
+- Console should log "AI service initialized in cloud mode with AWS as default provider"
 
 ### 2. AWS Authentication Flow
 **Objective**: Verify automatic user authentication with AWS
 
 **Steps**:
-1. Open the AI chat interface
-2. Send a message like "Hello, can you help me?"
-3. Check browser developer tools Network tab
-4. Check localStorage for session data
+1. Open browser developer tools (Network tab)
+2. Refresh the application
+3. Monitor network requests
 
 **Expected Results**:
-- First request should trigger authentication to `/api/auth/login`
-- A `kiro-kaiju-user-id` should be created in localStorage
-- A `kiro-kaiju-aws-session` should be stored in localStorage
-- Authentication should succeed and return a sessionId
+- Should see POST request to `/api/auth/login` with generated userId
+- Should receive sessionId in response
+- sessionId should be stored in localStorage as 'kiro-kaiju-aws-session'
+- Console should log "AWS authentication successful"
 
 ### 3. AI Chat Functionality
-**Objective**: Verify AI chat works with AWS backend
+**Objective**: Test AI chat using AWS backend
 
 **Steps**:
-1. Generate a challenge (any language/difficulty)
-2. Open the AI chat interface
-3. Send various messages:
-   - "Help me refactor this code"
-   - "Can you generate unit tests?"
-   - "What are the requirements for this challenge?"
-4. Observe responses and timing
+1. Navigate to Challenges view
+2. Generate a challenge (any language/difficulty)
+3. Switch to Coding view
+4. Open AI chat panel
+5. Send a message like "Help me refactor this code"
+6. Monitor network requests in developer tools
 
 **Expected Results**:
-- All messages should receive responses from AWS AI service
-- Responses should be contextually relevant to the challenge
-- Network requests should go to `/v1/chat/completions` with Bearer token
-- No fallback to local or OpenRouter services
+- Should see POST request to `/v1/chat/completions` with Authorization header
+- Should receive AI response from AWS backend
+- Response should appear in chat interface
+- No errors in console
 
-### 4. Session Management
-**Objective**: Verify session handling and re-authentication
+### 4. Challenge Generation
+**Objective**: Test challenge generation through AWS
 
 **Steps**:
-1. Send a successful AI chat message
-2. Clear the `kiro-kaiju-aws-session` from localStorage
-3. Send another AI chat message
-4. Check network requests
+1. Go to Challenges view
+2. Select language (e.g., JavaScript)
+3. Select category (e.g., Refactoring)
+4. Select difficulty (e.g., Beginner)
+5. Click "Generate Challenge"
+6. Monitor network requests
 
 **Expected Results**:
-- Second message should trigger re-authentication
-- New session should be created automatically
-- Message should still be processed successfully
+- Should see POST request to `/api/challenges/generate`
+- Should receive challenge data with Kaiju monster
+- Challenge should load in coding view
+- Kaiju image should display in sidebar
 
-### 5. Error Handling
-**Objective**: Verify graceful error handling
+### 5. Code Grading
+**Objective**: Test AI grading through AWS
 
 **Steps**:
-1. Disconnect from internet
-2. Try to send an AI chat message
-3. Reconnect to internet
-4. Try sending another message
+1. Complete a challenge (or modify the code)
+2. Click "Submit Code for Grading"
+3. Monitor network requests
 
 **Expected Results**:
-- Offline message should show appropriate error
-- Online message should work normally after reconnection
-- No application crashes or unhandled errors
-
-### 6. Zoom-a-Friend Integration
-**Objective**: Verify Zoom-a-Friend uses AWS AI service
-
-**Steps**:
-1. Generate a challenge
-2. Click on "Zoom-a-Friend"
-3. Select different team members (Cat, Owl, Pig, Pufferfish)
-4. Check network requests for each interaction
-
-**Expected Results**:
-- All team member interactions should use AWS AI service
-- Responses should be role-appropriate
-- Network requests should use the same AWS endpoints
-
-### 7. Grading System Integration
-**Objective**: Verify AI grading uses AWS service
-
-**Steps**:
-1. Generate a challenge
-2. Write some code in the editor
-3. Click "Submit Code for Grading"
-4. Check network requests and responses
-
-**Expected Results**:
-- Grading request should go to AWS AI service
-- Should receive scores from all four roles (Developer, Architect, SQA, Product Owner)
-- Results should be displayed properly
+- Should see POST request to `/api/grading/submit`
+- Should receive grading results with role-based scores
+- Results should display in grading modal
 - Progress should be updated
 
-### 8. Deployment Mode Switching
-**Objective**: Verify switching between cloud and local modes
+### 6. Session Management
+**Objective**: Test session persistence and re-authentication
 
 **Steps**:
-1. Start in cloud mode (default)
-2. Switch to local mode via deployment mode selector
-3. Try AI chat functionality
-4. Switch back to cloud mode
-5. Try AI chat functionality again
+1. Use the application normally for a few minutes
+2. Clear the AWS session from localStorage: `localStorage.removeItem('kiro-kaiju-aws-session')`
+3. Try to send an AI chat message
+4. Monitor network requests
 
 **Expected Results**:
-- Local mode should attempt to use Kiro or local LLM
-- Cloud mode should use AWS service
-- Switching should work without errors
-- Appropriate console messages for each mode
+- Should automatically re-authenticate when session is missing
+- Should see new POST request to `/api/auth/login`
+- Should receive new sessionId
+- AI request should succeed after re-authentication
+
+### 7. Error Handling
+**Objective**: Test error handling when AWS is unavailable
+
+**Steps**:
+1. Block network requests to the AWS domain in browser dev tools
+2. Try to send an AI chat message
+3. Check error messages
+
+**Expected Results**:
+- Should show user-friendly error message
+- Should not crash the application
+- Should provide fallback options or suggest local mode
+
+### 8. Mode Switching
+**Objective**: Test switching between cloud and local modes
+
+**Steps**:
+1. Start in Cloud mode (default)
+2. Click "🏠 Local" button in sidebar
+3. Try AI functionality
+4. Switch back to "☁️ Cloud"
+5. Try AI functionality again
+
+**Expected Results**:
+- Mode should switch successfully
+- Local mode should use Kiro integration or local LLM
+- Cloud mode should use AWS services
+- No errors during switching
+
+### 9. Progress Tracking
+**Objective**: Test progress tracking with AWS backend
+
+**Steps**:
+1. Complete a challenge and submit for grading
+2. Navigate to Progress view
+3. Check that grading results are saved
+
+**Expected Results**:
+- Progress should be saved to AWS DynamoDB
+- Should see grading history in Progress view
+- Statistics should be updated correctly
+
+### 10. Budget Management Integration
+**Objective**: Test budget management with AWS services
+
+**Steps**:
+1. Check budget status in sidebar
+2. Monitor for any budget alerts
+3. Test behavior when budget limits are approached
+
+**Expected Results**:
+- Budget status should display correctly
+- Should handle budget constraints gracefully
+- Should provide fallback options when budget is exceeded
 
 ## Error Scenarios to Test
 
-### 1. AWS Service Unavailable
-**Steps**:
-1. Block requests to AWS domain in browser dev tools
-2. Try to use AI chat
+### Authentication Failures
+- Invalid userId
+- Network timeout during login
+- AWS service unavailable
 
-**Expected Results**:
-- Should show appropriate error message
-- Should not crash the application
+### API Failures
+- 401 Unauthorized (expired session)
+- 429 Rate limiting
+- 500 Server errors
+- Network connectivity issues
 
-### 2. Invalid Session
-**Steps**:
-1. Manually set an invalid session ID in localStorage
-2. Try to use AI chat
+### Data Validation
+- Invalid challenge parameters
+- Malformed code submissions
+- Missing required fields
 
-**Expected Results**:
-- Should automatically re-authenticate
-- Should work normally after re-authentication
+## Performance Testing
 
-### 3. Network Timeout
-**Steps**:
-1. Use browser dev tools to simulate slow network
-2. Send AI chat message
+### Response Times
+- Challenge generation: < 10 seconds
+- AI chat responses: < 30 seconds
+- Code grading: < 45 seconds
+- Authentication: < 5 seconds
 
-**Expected Results**:
-- Should handle timeout gracefully
-- Should show appropriate loading states
-
-## Performance Tests
-
-### 1. Response Time
-**Objective**: Measure AI response times
-
-**Steps**:
-1. Send 5 different AI chat messages
-2. Record response times for each
-
-**Expected Results**:
-- Responses should typically be under 10 seconds
-- No significant degradation over multiple requests
-
-### 2. Session Persistence
-**Objective**: Verify session doesn't expire quickly
-
-**Steps**:
-1. Authenticate and get session
-2. Wait 10 minutes
-3. Send AI chat message
-
-**Expected Results**:
-- Session should still be valid
-- No re-authentication required
+### Concurrent Usage
+- Multiple AI requests
+- Simultaneous challenge generation
+- Rapid mode switching
 
 ## Browser Compatibility
-
-Test the above scenarios in:
+Test on:
 - Chrome (latest)
 - Firefox (latest)
 - Safari (latest)
 - Edge (latest)
 
 ## Mobile Testing
-
-Test key scenarios on:
+Test on mobile devices:
 - iOS Safari
 - Android Chrome
-- Responsive design at various screen sizes
+- Responsive design functionality
+- Touch interactions
+
+## Notes for Testers
+
+1. **Network Monitoring**: Always keep browser developer tools open to monitor network requests and responses
+2. **Console Logs**: Check browser console for any errors or warnings
+3. **LocalStorage**: Monitor localStorage for session management and user data
+4. **Error Recovery**: Test the application's ability to recover from various error conditions
+5. **User Experience**: Pay attention to loading states, error messages, and overall user experience
+
+## Known Issues to Ignore
+- Some unit tests are currently skipped and may show warnings
+- Local LLM functionality may not work without proper local setup
+- Some UI components may have minor styling issues during development
 
 ## Success Criteria
-
-- All test cases pass without errors
-- AWS is used as the default AI provider
-- Authentication flow works seamlessly
+- All test cases pass without critical errors
+- AWS authentication works reliably
+- AI functionality works through AWS backend
+- Mode switching works correctly
 - Error handling is graceful and user-friendly
-- Performance is acceptable (responses under 10 seconds)
-- All browsers and mobile devices work correctly
-
-## Known Issues / Limitations
-
-- Unit tests are currently skipped and need to be updated
-- Some existing tests may fail due to provider changes
-- Local LLM fallback may not work if AWS is unavailable (by design)
-
-## Notes for Developers
-
-- Check browser console for detailed error messages
-- Use Network tab to verify API calls are going to correct endpoints
-- Check localStorage for session management debugging
-- AWS backend logs can be viewed in CloudWatch if needed
+- Performance meets acceptable thresholds
