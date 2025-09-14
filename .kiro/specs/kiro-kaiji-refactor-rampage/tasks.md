@@ -247,7 +247,7 @@
   - AWS backend services have been deployed to: https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev
   - aiService.ts needs to updated to have an AWS service as well
   - Default should be AWS instead of Kiro
-  - To use AWS, user most first POST their userId to https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev/api/auth/login and get back a sessionid, which will then be used for Authentication: Bearer ${sessionId} for AI related endpoints
+  - To use AWS, user most first POST their non-null userId to https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev/api/auth/login and get back a sessionid, which will then be used for Authentication: Bearer ${sessionId} for AI related endpoints
   - Login required in order to use most endpoints
   - Do not write unit tests yet. You can write a test_plan.md file for manual testing. Any existing tests which fail should be skipped (it.skip or test.skip) for now.
   - Try to minimize the amount of code updated. Write new code similar to existing code. AWS Service routes in aws/servleress.yml are similar to OpenRouter but requires a different Authentication header on each login
