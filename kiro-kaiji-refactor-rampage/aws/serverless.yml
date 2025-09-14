@@ -18,7 +18,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs18.x
-  region: us-east-1
+  region: us-west-2
   stage: ${opt:stage, 'dev'}
   environment:
     DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
@@ -53,6 +53,12 @@ provider:
             - ce:GetCostAndUsage
             - ce:GetUsageReport
           Resource: "*"
+
+package:
+  patterns:
+    - '!node_modules/**' # Exclude node modules by default
+    - 'src/handlers/**' # Include your handler functions
+    - 'budget-config.json' # Explicitly include the budget-config.json file
 
 functions:
   challengeGeneration:

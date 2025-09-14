@@ -1,0 +1,95 @@
+{
+  "monthlyLimit": 15.00,
+  "alertThresholds": [50, 80, 95],
+  "automaticShutoff": true,
+  "gracePeriodHours": 2,
+  "snsTopicArn": "",
+  "cloudWatch": {
+    "enabled": true,
+    "metricNamespace": "KiroKaiju/Costs",
+    "alarmPrefix": "KiroKaiju-Budget",
+    "costMetricName": "MonthlySpending",
+    "alertActions": {
+      "50": "notification",
+      "80": "warning",
+      "95": "critical"
+    },
+    "monitoringFrequency": "daily",
+    "retentionDays": 30
+  },
+  "costOptimization": {
+    "prioritizeFreeTier": true,
+    "maxCostPerRequest": 0.01,
+    "preferredModels": [
+      "anthropic.claude-3-haiku-20240307-v1:0",
+      "amazon.titan-text-lite-v1",
+      "meta.llama2-13b-chat-v1"
+    ],
+    "emergencyFallback": {
+      "enableLocalMode": true,
+      "disableExpensiveOperations": true,
+      "maxTokensPerRequest": 1000
+    }
+  },
+  "services": {
+    "lambda": {
+      "maxInvocationsPerMonth": 1000000,
+      "maxGbSecondsPerMonth": 400000,
+      "costPerInvocation": 0.0000002,
+      "costPerGbSecond": 0.0000166667
+    },
+    "dynamodb": {
+      "maxReadCapacityUnits": 25,
+      "maxWriteCapacityUnits": 25,
+      "costPerReadUnit": 0.00013,
+      "costPerWriteUnit": 0.00065
+    },
+    "bedrock": {
+      "maxTokensPerMonth": 100000,
+      "preferredModels": [
+        "anthropic.claude-3-haiku-20240307-v1:0"
+      ],
+      "modelCosts": {
+        "anthropic.claude-3-haiku-20240307-v1:0": {
+          "inputCostPer1000": 0.00025,
+          "outputCostPer1000": 0.00125
+        },
+        "amazon.titan-text-lite-v1": {
+          "inputCostPer1000": 0.0003,
+          "outputCostPer1000": 0.0004
+        }
+      }
+    },
+    "sns": {
+      "maxNotificationsPerMonth": 1000,
+      "costPerNotification": 0.0005
+    },
+    "cloudwatch": {
+      "maxMetricsPerMonth": 10000,
+      "costPerMetric": 0.30
+    }
+  },
+  "notifications": {
+    "email": "",
+    "webhook": "",
+    "slackChannel": "",
+    "enableSMS": false,
+    "smsNumber": ""
+  },
+  "fallbackOptions": {
+    "switchToLocalMode": true,
+    "requireOpenRouterKey": true,
+    "disableAIFeatures": false,
+    "gracefulDegradation": {
+      "disableNonEssentialFeatures": true,
+      "reduceAIComplexity": true,
+      "limitConcurrentRequests": 1
+    }
+  },
+  "budgetEnforcement": {
+    "preventNewApiCalls": true,
+    "shutdownServices": true,
+    "notifyAdministrators": true,
+    "logBudgetViolations": true
+  }
+}

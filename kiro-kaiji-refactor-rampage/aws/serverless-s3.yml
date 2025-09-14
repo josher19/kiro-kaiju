@@ -1,0 +1,52 @@
+service: kaiju-refactor-rampage-site
+
+# Make sure you are using Serverless Framework v3.
+frameworkVersion: "3"
+
+plugins:
+  - serverless-s3-sync
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-west-2 # Change to your preferred AWS region
+  stage: dev # Example stage
+
+# Custom variables to define S3 bucket name and regions
+custom:
+  bucketName: ${self:service}-${self:provider.stage}
+  s3Sync:
+    # Sync the compiled Vue app from the 'dist' directory
+    - bucketName: ${self:custom.bucketName}
+      localDir: ../dist/
+
+    # Sync the image assets from the 'src/assets/images' directory
+    - bucketName: ${self:custom.bucketName}
+      bucketPrefix: src/assets/images/ # S3 path to upload files
+      localDir: ../src/assets/images/
+
+resources:
+  Resources:
+    # Define the S3 bucket
+    StaticSiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html # Important for SPAs to handle client-side routing
+
+    # Configure the S3 bucket policy for public access
+    StaticSiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref StaticSiteBucket
+        PolicyDocument:
+          Statement:
+            - Effect: "Allow"
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource:
+                - "arn:aws:s3:::${self:custom.bucketName}/*"
