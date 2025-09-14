@@ -682,7 +682,7 @@ onMounted(async () => {
     try {
       const { CloudService } = await import('@/services/cloudService')
       cloudService.value = await CloudService.fromStoredSession(
-        process.env.VITE_API_BASE_URL || 'https://api.kiro-kaiju.com'
+        import.meta.env.VITE_API_BASE_URL || 'https://api.kiro-kaiju.com'
       )
     } catch (error) {
       console.error('Failed to initialize cloud service:', error)

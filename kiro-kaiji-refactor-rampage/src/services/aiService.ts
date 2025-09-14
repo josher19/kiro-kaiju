@@ -18,7 +18,7 @@ import { getModelPreferenceHierarchy } from '@/utils/aiConfig';
 
 export interface AIServiceConfig {
   mode: 'local' | 'cloud';
-  provider?: 'kiro' | 'local-llm' | 'openrouter';
+  provider?: 'kiro' | 'local-llm' | 'openrouter' | 'aws';
   apiKey?: string;
   baseUrl?: string;
   model?: string;
@@ -34,6 +34,12 @@ export interface AIServiceConfig {
     maxRetries?: number;
     retryDelay?: number;
     enableFallback?: boolean;
+  };
+  aws?: {
+    baseUrl: string;
+    sessionId?: string;
+    timeout?: number;
+    maxRetries?: number;
   };
   requestDelay?: number;
 }
@@ -105,19 +111,21 @@ export class AIService {
         response = this.generateOfflineFallbackResponse(request, challengeContext);
       } else {
         try {
-          // Determine provider based on config
-          const provider = this.config.provider || (this.config.mode === 'local' ? 'kiro' : 'openrouter');
+          // Determine provider based on config - default to AWS for cloud mode
+          const provider = this.config.provider || (this.config.mode === 'local' ? 'kiro' : 'aws');
 
           switch (provider) {
             case 'kiro':
               response = await this.sendToKiroAI(request, challengeContext);
-              // response = await this.sendToLocalLLM(request, challengeContext);
               break;
             case 'local-llm':
               response = await this.sendToLocalLLM(request, challengeContext);
               break;
             case 'openrouter':
               response = await this.sendToOpenRouter(request, challengeContext);
+              break;
+            case 'aws':
+              response = await this.sendToAWS(request, challengeContext);
               break;
             default:
               throw new Error(`Unknown AI provider: ${provider}`);
@@ -575,6 +583,139 @@ What specific aspect would you like help with?`;
   }
 
   /**
+   * Send request to AWS Cloud Services
+   */
+  private async sendToAWS(
+    request: AIChatRequest,
+    challengeContext: ChallengeContext
+  ): Promise<AIChatMessage> {
+    const awsConfig = this.config.aws || {
+      baseUrl: 'https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev',
+      timeout: 60000,
+      maxRetries: 3
+    };
+
+    // Check if we have a session ID, if not, authenticate first
+    if (!awsConfig.sessionId) {
+      await this.authenticateWithAWS(awsConfig);
+    }
+
+    const systemPrompt = this.buildSystemPrompt(challengeContext);
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...request.conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      { role: 'user', content: request.message }
+    ];
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), awsConfig.timeout || 60000);
+
+    try {
+      const response = await fetch(`${awsConfig.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${awsConfig.sessionId}`
+        },
+        body: JSON.stringify({
+          model: this.config.model || 'anthropic.claude-3-haiku-20240307-v1:0',
+          messages,
+          temperature: 0.7,
+          max_tokens: 1000,
+          stream: false
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Handle authentication errors by re-authenticating
+        if (response.status === 401) {
+          console.log('AWS session expired, re-authenticating...');
+          await this.authenticateWithAWS(awsConfig);
+          // Retry the request with new session
+          return this.sendToAWS(request, challengeContext);
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`AWS API error: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid response format from AWS API');
+      }
+
+      return {
+        id: this.generateMessageId(),
+        role: 'assistant',
+        content: data.choices[0].message.content,
+        timestamp: new Date(),
+        context: {
+          challengeId: request.challengeId,
+          currentCode: request.currentCode,
+          modelUsed: data.model
+        }
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if ((error as Error).name === 'AbortError') {
+        throw new Error('AWS API request timed out');
+      }
+
+      console.error('AWS API integration error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Authenticate with AWS and get session ID
+   */
+  private async authenticateWithAWS(awsConfig: NonNullable<AIServiceConfig['aws']>): Promise<void> {
+    try {
+      // Generate a user ID if not already stored
+      let userId = localStorage.getItem('kiro-kaiju-user-id');
+      if (!userId) {
+        userId = `user-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+        localStorage.setItem('kiro-kaiju-user-id', userId);
+      }
+
+      const response = await fetch(`${awsConfig.baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AWS authentication failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.sessionId) {
+        throw new Error('No session ID received from AWS authentication');
+      }
+
+      // Store session ID in config and localStorage
+      awsConfig.sessionId = data.sessionId;
+      localStorage.setItem('kiro-kaiju-aws-session', data.sessionId);
+      
+      console.log('AWS authentication successful');
+    } catch (error) {
+      console.error('AWS authentication error:', error);
+      throw new Error(`Failed to authenticate with AWS: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Build system prompt based on challenge context
    */
   private buildSystemPrompt(challengeContext: ChallengeContext): string {
@@ -746,11 +887,17 @@ let aiServiceInstance: AIService | null = null;
 export function createAIService(config?: AIServiceConfig): AIService {
   // If no config provided, create from environment
   if (!config) {
-    // Fallback to default config
+    // Default to AWS cloud mode
     config = {
-      mode: 'local',
-      provider: 'kiro',
-      requestDelay: 1000
+      mode: 'cloud',
+      provider: 'aws',
+      requestDelay: 1000,
+      aws: {
+        baseUrl: 'https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev',
+        sessionId: localStorage.getItem('kiro-kaiju-aws-session') || undefined,
+        timeout: 60000,
+        maxRetries: 3
+      }
     };
   }
 
@@ -837,4 +984,30 @@ export function createCodingOpenRouterAIService(apiKey: string): AIService {
     enableFallback: true,
     maxRetries: 3
   });
+}
+
+/**
+ * Create AI service with AWS configuration
+ */
+export function createAWSAIService(
+  baseUrl?: string,
+  sessionId?: string,
+  options?: {
+    timeout?: number;
+    maxRetries?: number;
+  }
+): AIService {
+  const config: AIServiceConfig = {
+    mode: 'cloud',
+    provider: 'aws',
+    requestDelay: 1000,
+    aws: {
+      baseUrl: baseUrl || 'https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev',
+      sessionId: sessionId || localStorage.getItem('kiro-kaiju-aws-session') || undefined,
+      timeout: options?.timeout || 60000,
+      maxRetries: options?.maxRetries || 3
+    }
+  };
+
+  return createAIService(config);
 }

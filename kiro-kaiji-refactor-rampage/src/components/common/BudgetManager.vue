@@ -150,7 +150,7 @@ const alertMessage = computed(() => {
 });
 
 const showFallbackOptions = computed(() => {
-  return budgetStatus.value?.status === 'exceeded' || budgetStatus.value?.percentageUsed >= 95;
+  return budgetStatus.value?.status === 'exceeded' || (budgetStatus.value?.percentageUsed ?? 0) >= 95;
 });
 
 // Methods
@@ -205,7 +205,7 @@ const switchToLocalMode = () => {
 const saveOpenRouterKey = () => {
   if (openRouterKey.value.trim()) {
     localStorage.setItem('openrouter-api-key', openRouterKey.value.trim());
-    appStore.setDeploymentMode('remote');
+    appStore.setDeploymentMode('cloud');
     showBudgetAlert.value = false;
     showOpenRouterKeyInput.value = false;
     
@@ -216,8 +216,9 @@ const saveOpenRouterKey = () => {
   }
 };
 
-const handleBudgetExceeded = (event: CustomEvent) => {
-  fallbackOptions.value = event.detail.fallbackOptions;
+const handleBudgetExceeded = (event: Event) => {
+  const customEvent = event as CustomEvent;
+  fallbackOptions.value = customEvent.detail.fallbackOptions;
   showBudgetAlert.value = true;
   alertDismissed.value = false;
 };

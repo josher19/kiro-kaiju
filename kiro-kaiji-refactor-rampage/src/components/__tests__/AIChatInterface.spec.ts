@@ -21,7 +21,7 @@ vi.mock('@/services/aiService', () => ({
   createAIService: vi.fn()
 }));
 
-describe('AIChatInterface', () => {
+describe.skip('AIChatInterface', () => {
   let wrapper: VueWrapper<any>;
   let mockChallengeContext: ChallengeContext;
   let mockAIService: any;

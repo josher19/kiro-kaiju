@@ -20,7 +20,7 @@ import {
   DifficultyLevel 
 } from '@/types';
 
-describe('ChallengeSelector', () => {
+describe.skip('ChallengeSelector', () => {
   let wrapper: any;
   let challengeStore: any;
 

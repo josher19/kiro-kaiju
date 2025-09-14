@@ -254,13 +254,17 @@ export const useAppStore = defineStore('app', () => {
           mode: 'local'
         });
       } else {
-        // Cloud mode - use OpenRouter API with fallback
-        const apiKey = localStorage.getItem('openrouter-api-key') || '';
+        // Cloud mode - use AWS by default
         createAIService({
           mode: 'cloud',
-          apiKey,
-          baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-          model: 'anthropic/claude-3-haiku'
+          provider: 'aws',
+          requestDelay: 1000,
+          aws: {
+            baseUrl: 'https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev',
+            sessionId: localStorage.getItem('kiro-kaiju-aws-session') || undefined,
+            timeout: 60000,
+            maxRetries: 3
+          }
         });
       }
       
@@ -285,9 +289,8 @@ export const useAppStore = defineStore('app', () => {
     if (savedMode && ['local', 'cloud'].includes(savedMode)) {
       await setDeploymentMode(savedMode);
     } else {
-      // Auto-detect deployment mode - default to cloud for standalone usage
-      const detectedMode = (typeof window !== 'undefined' && window.kiro) ? 'local' : 'cloud';
-      await setDeploymentMode(detectedMode);
+      // Default to AWS cloud mode
+      await setDeploymentMode('cloud');
     }
 
     // Load Kiro config

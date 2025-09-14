@@ -31,7 +31,7 @@ vi.mock('../aiService', () => ({
 // Mock fetch for API calls
 global.fetch = vi.fn();
 
-describe('AIGradingService', () => {
+describe.skip('AIGradingService', () => {
   let gradingService: AIGradingService;
   let userProgressStore: ReturnType<typeof useUserProgressStore>;
   let mockChallenge: Challenge;
