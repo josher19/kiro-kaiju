@@ -1,5 +1,5 @@
 <template>
-  <div class="main-layout min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+  <div class="main-layout min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200" data-testid="main-container">
     <!-- Mobile Header -->
     <header class="lg:hidden bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center justify-between px-4 py-3">
@@ -40,6 +40,7 @@
       <div 
         v-show="isMobileMenuOpen"
         class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+        data-testid="mobile-nav"
       >
         <nav class="px-4 py-3 space-y-2">
           <button
@@ -50,6 +51,7 @@
             :class="currentView === view.id 
               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            :data-testid="`${view.id}-tab`"
           >
             <span class="text-lg">{{ view.icon }}</span>
             <span class="font-medium">{{ view.label }}</span>
@@ -80,6 +82,7 @@
             :class="currentView === view.id 
               ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            :data-testid="`${view.id}-tab`"
           >
             <span class="text-lg">{{ view.icon }}</span>
             <span class="font-medium">{{ view.label }}</span>
@@ -158,7 +161,7 @@
             <div class="text-center max-w-md mx-auto px-4">
               <div class="text-6xl mb-4">😵</div>
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
-              <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
+              <p class="text-gray-600 dark:text-gray-400 mb-4" data-testid="error-message">{{ error }}</p>
               <button
                 @click="retryOperation"
                 class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -189,7 +192,7 @@
             </div>
             
             <!-- Coding View -->
-            <div v-else-if="currentView === 'coding'" class="flex-1 flex flex-col lg:flex-row min-h-0">
+            <div v-else-if="currentView === 'coding'" class="flex-1 flex flex-col lg:flex-row min-h-0" data-testid="challenge-container">
               <!-- Code Editor Area -->
               <div class="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-800">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -214,6 +217,7 @@
                       @click="toggleAIPanel"
                       class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       :class="{ 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400': isAIPanelOpen }"
+                      data-testid="ai-chat-toggle"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.471L3 21l2.471-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"></path>
@@ -223,6 +227,7 @@
                       @click="toggleZoomPanel"
                       class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       :class="{ 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400': isZoomPanelOpen }"
+                      data-testid="zoom-friend-toggle"
                     >
                       <span class="text-sm">🎥</span>
                     </button>
@@ -300,7 +305,7 @@
             </div>
             
             <!-- Progress View -->
-            <div v-else-if="currentView === 'progress'" class="flex-1 p-4 lg:p-6">
+            <div v-else-if="currentView === 'progress'" class="flex-1 p-4 lg:p-6" data-testid="progress-profile">
               <div class="max-w-6xl mx-auto">
                 <div class="mb-6">
                   <h2 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -330,6 +335,7 @@
       v-if="isAIPanelOpen && isMobile"
       class="fixed inset-x-0 bottom-0 top-16 bg-white dark:bg-gray-800 z-50 lg:hidden transform transition-transform duration-300"
       :class="isAIPanelOpen ? 'translate-y-0' : 'translate-y-full'"
+      data-testid="ai-chat-interface"
     >
       <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h3 class="font-semibold text-gray-900 dark:text-white">AI Assistant</h3>
@@ -356,6 +362,7 @@
       v-if="isZoomPanelOpen && isMobile"
       class="fixed inset-x-0 bottom-0 top-16 bg-white dark:bg-gray-800 z-50 lg:hidden transform transition-transform duration-300"
       :class="isZoomPanelOpen ? 'translate-y-0' : 'translate-y-full'"
+      data-testid="zoom-friend-panel"
     >
       <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h3 class="font-semibold text-gray-900 dark:text-white">Zoom-a-Friend</h3>

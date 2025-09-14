@@ -1,5 +1,5 @@
 <template>
-  <div class="zoom-friend-panel bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+  <div class="zoom-friend-panel bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4" data-testid="zoom-friend-panel">
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
@@ -20,19 +20,20 @@
         Choose a team member to get advice:
       </p>
       
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="team-members">
         <button
           v-for="member in teamMembers"
           :key="member.id"
           @click="selectTeamMember(member)"
           class="team-member-card flex flex-col items-center p-3 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
           :class="{ 'animate-pulse': isLoading }"
+          :data-testid="`team-member-${member.id}`"
         >
           <div class="text-4xl mb-2">{{ getAnimalEmoji(member.avatar) }}</div>
           <div class="text-xs font-medium text-gray-700 dark:text-gray-300 text-center">
             {{ member.name }}
           </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
+          <div class="text-xs text-gray-500 dark:text-gray-400 text-center mt-1" :data-testid="`role-title-${member.role}`">
             {{ getJobTitle(member.role) }}
           </div>
         </button>
@@ -60,6 +61,7 @@
           v-for="message in activeSession.messages"
           :key="message.timestamp.getTime()"
           class="message p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
+          data-testid="team-dialog"
         >
           <div class="flex items-start space-x-2">
             <div class="text-lg">{{ getAnimalEmoji(message.teamMember.avatar) }}</div>

@@ -383,7 +383,7 @@ export class CloudService {
   }
 
   static isBudgetExceeded(): boolean {
-    const budgetState = localStorage.getItem('kiro-budget-exceeded');
+    const budgetState = localStorage?.getItem('kiro-budget-exceeded');
     if (!budgetState) return false;
 
     try {

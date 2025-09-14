@@ -1,5 +1,5 @@
 <template>
-  <div class="grading-results bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+  <div class="grading-results bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6" data-testid="evaluation-results">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -25,7 +25,7 @@
       <div class="text-center">
         <div class="inline-flex items-center justify-center w-24 h-24 rounded-full mb-4"
              :class="getScoreColorClass(results.averageScore)">
-          <span class="text-3xl font-bold text-white">
+          <span class="text-3xl font-bold text-white" data-testid="overall-score">
             {{ results.averageScore }}
           </span>
         </div>
@@ -60,7 +60,8 @@
             </div>
             <div class="flex items-center space-x-2">
               <span class="text-2xl font-bold"
-                    :class="getScoreTextColor(evaluation.score)">
+                    :class="getScoreTextColor(evaluation.score)"
+                    :data-testid="`${evaluation.role}-score`">
                 {{ evaluation.score }}
               </span>
               <span class="text-sm text-gray-500 dark:text-gray-400">
@@ -69,7 +70,7 @@
             </div>
           </div>
           
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" data-testid="evaluation-feedback">
             {{ evaluation.feedback }}
           </p>
           

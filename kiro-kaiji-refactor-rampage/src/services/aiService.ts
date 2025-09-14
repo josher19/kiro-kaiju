@@ -110,8 +110,8 @@ export class AIService {
 
           switch (provider) {
             case 'kiro':
-              // response = await this.sendToKiroAI(request, challengeContext);
-              response = await this.sendToLocalLLM(request, challengeContext);
+              response = await this.sendToKiroAI(request, challengeContext);
+              // response = await this.sendToLocalLLM(request, challengeContext);
               break;
             case 'local-llm':
               response = await this.sendToLocalLLM(request, challengeContext);

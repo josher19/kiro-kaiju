@@ -34,7 +34,7 @@
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="stat-card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="challenges-completed">
           {{ userProgress?.stats.challengesCompleted || 0 }}
         </div>
         <div class="text-sm text-gray-600 dark:text-gray-400">
@@ -43,7 +43,7 @@
       </div>
       
       <div class="stat-card bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-        <div class="text-2xl font-bold text-green-600 dark:text-green-400">
+        <div class="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="average-score">
           {{ Math.round(userProgress?.stats.averageScore || 0) }}
         </div>
         <div class="text-sm text-gray-600 dark:text-gray-400">

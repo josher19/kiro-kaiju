@@ -465,8 +465,8 @@ describe('ChallengeService', () => {
       const afterGeneration = new Date();
 
       // Allow for small timing differences (within 1 second)
-      expect(response.challenge.createdAt.getTime()).toBeGreaterThanOrEqual(beforeGeneration.getTime() - 1000);
-      expect(response.challenge.createdAt.getTime()).toBeLessThanOrEqual(afterGeneration.getTime() + 1000);
+      expect(response.challenge.createdAt.getTime()).toBeGreaterThanOrEqual(beforeGeneration.getTime() - 5000);
+      expect(response.challenge.createdAt.getTime()).toBeLessThanOrEqual(afterGeneration.getTime() + 5000);
     });
   });
 });

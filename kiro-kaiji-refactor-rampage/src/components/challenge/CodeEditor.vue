@@ -1,5 +1,5 @@
 <template>
-  <div class="code-editor-container h-full flex flex-col">
+  <div class="code-editor-container h-full flex flex-col" data-testid="code-editor">
     <!-- Editor Header with Controls -->
     <div class="editor-header bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between">
       <div class="flex items-center space-x-2">
@@ -19,6 +19,7 @@
           :class="isGradingInProgress 
             ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             : 'bg-blue-600 hover:bg-blue-700 text-white'"
+          data-testid="submit-solution-btn"
         >
           <span v-if="isGradingInProgress" class="flex items-center space-x-1">
             <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
@@ -32,7 +33,7 @@
       </div>
       
       <!-- Mobile Controls -->
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-2" data-testid="editor-zoom-controls">
         <button
           v-if="isMobile"
           @click="toggleMobileKeyboard"

@@ -36,7 +36,7 @@ describe('AIService', () => {
     mockConfig = {
       mode: 'local',
       apiKey: 'test-key',
-      baseUrl: 'http://localhost:3000',
+      baseUrl: 'http://localhost:1234',
       model: 'test-model'
     };
 

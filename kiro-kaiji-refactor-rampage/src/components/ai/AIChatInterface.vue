@@ -1,5 +1,5 @@
 <template>
-  <div class="ai-chat-interface flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+  <div class="ai-chat-interface flex flex-col h-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg" data-testid="ai-chat-interface">
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
       <div class="flex items-center space-x-2">
@@ -61,6 +61,7 @@
               ? 'bg-blue-500 text-white'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
           ]"
+          :data-testid="message.role === 'assistant' ? 'ai-message' : 'user-message'"
         >
           <div 
             class="markdown-content whitespace-pre-wrap break-words"
@@ -92,7 +93,7 @@
       </div>
 
       <!-- Error Message -->
-      <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+      <div v-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4" data-testid="ai-error-message">
         <div class="flex items-start space-x-2">
           <svg class="w-5 h-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -102,6 +103,7 @@
             <button
               @click="retryLastMessage"
               class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 mt-1 underline"
+              data-testid="ai-retry-btn"
             >
               Try again
             </button>
@@ -124,6 +126,7 @@
             rows="1"
             :disabled="isLoading"
             maxlength="2000"
+            data-testid="ai-chat-input"
           ></textarea>
           <div class="absolute bottom-2 right-2 text-xs text-gray-400">
             {{ currentMessage.length }}/2000
@@ -138,6 +141,7 @@
               ? 'bg-blue-500 hover:bg-blue-600 text-white'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           ]"
+          data-testid="ai-chat-send"
         >
           <svg v-if="isLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

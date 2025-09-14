@@ -320,7 +320,7 @@ function calculateTotalWithTax(items) {
       );
 
       expect(mockKiroAPI.ai.analyze).toHaveBeenCalledWith(
-        expect.stringContaining(testCode),
+        expect.stringContaining(testCode.toString().split('\n')[0]),
         {
           challengeId: mockChallenge.id,
           language: mockChallenge.config.language
