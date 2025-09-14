@@ -242,3 +242,13 @@
   - Create performance benchmarks for challenge generation
   - Add cross-browser compatibility testing
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
+
+- [x] 23. Use AWS Cloud Mode Services by default
+  - AWS backend services have been deployed to: https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev
+  - aiService.ts needs to updated to have an AWS service as well
+  - Default should be AWS instead of Kiro
+  - To use AWS, user most first POST their userId to https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev/api/auth/login and get back a sessionid, which will then be used for Authentication: Bearer ${sessionId} for AI related endpoints
+  - Login required in order to use most endpoints
+  - Do not write unit tests yet. You can write a test_plan.md file for manual testing. Any existing tests which fail should be skipped (it.skip or test.skip) for now.
+  - Try to minimize the amount of code updated. Write new code similar to existing code. AWS Service routes in aws/servleress.yml are similar to OpenRouter but requires a different Authentication header on each login
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
