@@ -1,371 +1,258 @@
 <template>
-  <div v-if="hasError" class="error-boundary">
-    <div class="error-container">
-      <div class="error-icon">
-        <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+  <div class="error-boundary">
+    <!-- Error State -->
+    <div 
+      v-if="hasError"
+      class="error-container flex flex-col items-center justify-center min-h-64 p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+    >
+      <!-- Error Icon -->
+      <div class="error-icon mb-4">
+        <svg class="w-16 h-16 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
         </svg>
       </div>
+
+      <!-- Error Message -->
+      <h3 class="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+        {{ errorTitle }}
+      </h3>
       
-      <h2 class="error-title">{{ errorTitle }}</h2>
-      <p class="error-message">{{ errorMessage }}</p>
-      
-      <div v-if="showDetails && errorDetails" class="error-details">
-        <button 
-          @click="toggleDetails" 
-          class="details-toggle"
-          :class="{ 'expanded': showErrorDetails }"
+      <p class="text-red-600 dark:text-red-300 text-center mb-4 max-w-md">
+        {{ errorMessage }}
+      </p>
+
+      <!-- Error Details (Development Mode) -->
+      <details 
+        v-if="showDetails && errorDetails"
+        class="w-full max-w-2xl mb-4"
+      >
+        <summary class="cursor-pointer text-sm text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200">
+          Show Error Details
+        </summary>
+        <pre class="mt-2 p-3 bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-700 rounded text-xs text-red-800 dark:text-red-200 overflow-auto max-h-40">{{ errorDetails }}</pre>
+      </details>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button
+          @click="retry"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         >
-          <span>{{ showErrorDetails ? 'Hide' : 'Show' }} Details</span>
-          <svg class="w-4 h-4 ml-2 transform transition-transform" 
-               :class="{ 'rotate-180': showErrorDetails }"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
+          Try Again
         </button>
         
-        <div v-if="showErrorDetails" class="error-details-content">
-          <pre class="error-stack">{{ errorDetails }}</pre>
-        </div>
-      </div>
-      
-      <div class="error-actions">
-        <button 
-          @click="retry" 
-          class="btn-primary"
-          :disabled="isRetrying"
-        >
-          <svg v-if="isRetrying" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          {{ isRetrying ? 'Retrying...' : 'Try Again' }}
-        </button>
-        
-        <button 
-          v-if="canGoBack" 
-          @click="goBack" 
-          class="btn-secondary"
-        >
-          Go Back
-        </button>
-        
-        <button 
-          v-if="canReload" 
-          @click="reload" 
-          class="btn-secondary"
+        <button
+          v-if="showReload"
+          @click="reloadPage"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
         >
           Reload Page
         </button>
-      </div>
-      
-      <div v-if="suggestions.length > 0" class="error-suggestions">
-        <h3>Suggestions:</h3>
-        <ul>
-          <li v-for="suggestion in suggestions" :key="suggestion">
-            {{ suggestion }}
-          </li>
-        </ul>
+        
+        <button
+          v-if="fallbackAction"
+          @click="fallbackAction.handler"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          {{ fallbackAction.label }}
+        </button>
       </div>
     </div>
+
+    <!-- Loading State -->
+    <div 
+      v-else-if="isLoading"
+      class="loading-container flex flex-col items-center justify-center min-h-32 p-6"
+    >
+      <div class="loading-spinner mb-4">
+        <svg class="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400">{{ loadingMessage }}</p>
+    </div>
+
+    <!-- Success State - Render Children -->
+    <div v-else class="error-boundary-content">
+      <slot />
+    </div>
   </div>
-  
-  <slot v-else />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onErrorCaptured, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { errorHandler, type AppError, ErrorCategory, ErrorSeverity } from '@/utils/errorHandler';
+import { ref, onErrorCaptured, watch, nextTick } from 'vue'
 
+// Props
 interface Props {
-  fallbackTitle?: string;
-  fallbackMessage?: string;
-  showDetails?: boolean;
-  canRetry?: boolean;
-  canGoBack?: boolean;
-  canReload?: boolean;
-  onRetry?: () => void | Promise<void>;
-  maxRetries?: number;
+  errorTitle?: string
+  errorMessage?: string
+  loadingMessage?: string
+  showDetails?: boolean
+  showReload?: boolean
+  fallbackAction?: {
+    label: string
+    handler: () => void
+  }
+  retryHandler?: () => Promise<void> | void
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  fallbackTitle: 'Something went wrong',
-  fallbackMessage: 'An unexpected error occurred. Please try again.',
-  showDetails: true,
-  canRetry: true,
-  canGoBack: true,
-  canReload: true,
-  maxRetries: 3
-});
+  errorTitle: 'Something went wrong',
+  errorMessage: 'An unexpected error occurred. Please try again.',
+  loadingMessage: 'Loading...',
+  showDetails: import.meta.env.DEV, // Show details in development mode
+  showReload: true,
+  fallbackAction: undefined,
+  retryHandler: undefined
+})
 
+// Emits
 const emit = defineEmits<{
-  error: [error: AppError];
-  retry: [];
-  recovered: [];
-}>();
+  error: [error: Error]
+  retry: []
+  reload: []
+}>()
 
-const router = useRouter();
-
-// State
-const hasError = ref(false);
-const currentError = ref<AppError | null>(null);
-const showErrorDetails = ref(false);
-const isRetrying = ref(false);
-const retryCount = ref(0);
-
-// Computed
-const errorTitle = computed(() => {
-  if (!currentError.value) return props.fallbackTitle;
-  
-  switch (currentError.value.category) {
-    case ErrorCategory.NETWORK:
-      return 'Connection Problem';
-    case ErrorCategory.VALIDATION:
-      return 'Invalid Input';
-    case ErrorCategory.GENERATION:
-      return 'Challenge Generation Failed';
-    case ErrorCategory.EVALUATION:
-      return 'Evaluation Failed';
-    case ErrorCategory.AI_SERVICE:
-      return 'AI Assistant Unavailable';
-    case ErrorCategory.KIRO_INTEGRATION:
-      return 'Kiro Integration Issue';
-    case ErrorCategory.STORAGE:
-      return 'Storage Problem';
-    default:
-      return props.fallbackTitle;
-  }
-});
-
-const errorMessage = computed(() => {
-  return currentError.value?.userMessage || props.fallbackMessage;
-});
-
-const errorDetails = computed(() => {
-  if (!currentError.value) return null;
-  
-  return `Error Code: ${currentError.value.code}
-Category: ${currentError.value.category}
-Severity: ${currentError.value.severity}
-Time: ${currentError.value.timestamp.toISOString()}
-Message: ${currentError.value.message}
-${currentError.value.originalError ? `\nStack: ${currentError.value.originalError.stack}` : ''}`;
-});
-
-const suggestions = computed(() => {
-  if (!currentError.value) return [];
-  
-  const baseSuggestions: string[] = [];
-  
-  switch (currentError.value.category) {
-    case ErrorCategory.NETWORK:
-      baseSuggestions.push(
-        'Check your internet connection',
-        'Try refreshing the page',
-        'Wait a moment and try again'
-      );
-      break;
-    case ErrorCategory.VALIDATION:
-      baseSuggestions.push(
-        'Check your input for errors',
-        'Make sure all required fields are filled',
-        'Verify the format of your data'
-      );
-      break;
-    case ErrorCategory.GENERATION:
-      baseSuggestions.push(
-        'Try different challenge parameters',
-        'Check if you have cached challenges available',
-        'Wait a moment and try again'
-      );
-      break;
-    case ErrorCategory.EVALUATION:
-      baseSuggestions.push(
-        'Check your code for syntax errors',
-        'Try submitting again',
-        'Your progress has been saved for later sync'
-      );
-      break;
-    case ErrorCategory.AI_SERVICE:
-      baseSuggestions.push(
-        'The AI assistant will be back shortly',
-        'You can continue coding without AI help',
-        'Check your network connection'
-      );
-      break;
-    case ErrorCategory.KIRO_INTEGRATION:
-      baseSuggestions.push(
-        'Some features may be limited',
-        'Try switching to cloud mode',
-        'Restart the Kiro IDE if needed'
-      );
-      break;
-    case ErrorCategory.STORAGE:
-      baseSuggestions.push(
-        'Clear browser cache if needed',
-        'Check available storage space',
-        'Your data will sync when possible'
-      );
-      break;
-  }
-  
-  return baseSuggestions;
-});
+// Local state
+const hasError = ref(false)
+const isLoading = ref(false)
+const errorDetails = ref<string>('')
+const retryCount = ref(0)
+const maxRetries = 3
 
 // Error capture
-onErrorCaptured((error: Error, instance, info) => {
-  console.error('Error boundary caught error:', error, info);
+onErrorCaptured((error: Error) => {
+  console.error('ErrorBoundary caught error:', error)
   
-  const appError = errorHandler.handle(error, {
-    component: instance?.$options.name || 'Unknown',
-    errorInfo: info
-  });
+  hasError.value = true
+  isLoading.value = false
+  errorDetails.value = error.stack || error.message
   
-  handleError(appError);
-  return false; // Prevent error from propagating
-});
+  emit('error', error)
+  
+  // Return false to prevent the error from propagating further
+  return false
+})
 
 // Methods
-function handleError(error: AppError) {
-  currentError.value = error;
-  hasError.value = true;
-  retryCount.value = 0;
-  
-  emit('error', error);
-}
-
-function toggleDetails() {
-  showErrorDetails.value = !showErrorDetails.value;
-}
-
-async function retry() {
-  if (retryCount.value >= props.maxRetries) {
-    console.warn('Maximum retry attempts reached');
-    return;
+const retry = async () => {
+  if (retryCount.value >= maxRetries) {
+    console.warn('Maximum retry attempts reached')
+    return
   }
   
-  isRetrying.value = true;
-  retryCount.value++;
+  retryCount.value++
+  hasError.value = false
+  isLoading.value = true
   
   try {
-    if (props.onRetry) {
-      await props.onRetry();
+    if (props.retryHandler) {
+      await props.retryHandler()
     }
     
-    // Reset error state
-    hasError.value = false;
-    currentError.value = null;
-    showErrorDetails.value = false;
+    // Wait for next tick to allow component to re-render
+    await nextTick()
     
-    emit('retry');
-    emit('recovered');
-    
+    isLoading.value = false
+    emit('retry')
   } catch (error) {
-    console.error('Retry failed:', error);
-    const appError = errorHandler.handle(error as Error, {
-      context: 'error_boundary_retry',
-      retryAttempt: retryCount.value
-    });
+    console.error('Retry failed:', error)
+    hasError.value = true
+    isLoading.value = false
     
-    currentError.value = appError;
-  } finally {
-    isRetrying.value = false;
+    if (error instanceof Error) {
+      errorDetails.value = error.stack || error.message
+    }
   }
 }
 
-function goBack() {
-  // Vue Router 4 doesn't have canGoBack, use history API instead
-  if (window.history.length > 1) {
-    router.back();
-  } else {
-    router.push('/');
-  }
+const reloadPage = () => {
+  emit('reload')
+  window.location.reload()
 }
 
-function reload() {
-  window.location.reload();
+// Reset error state when component is reused
+const reset = () => {
+  hasError.value = false
+  isLoading.value = false
+  errorDetails.value = ''
+  retryCount.value = 0
 }
 
-// Watch for external error recovery
-watch(() => hasError.value, (newValue, oldValue) => {
-  if (oldValue && !newValue) {
-    emit('recovered');
+// Watch for external loading state changes
+watch(() => props.loadingMessage, (newMessage) => {
+  if (newMessage && !hasError.value) {
+    isLoading.value = true
   }
-});
+})
 
 // Expose methods for parent components
 defineExpose({
-  handleError,
+  reset,
   retry,
-  reset: () => {
-    hasError.value = false;
-    currentError.value = null;
-    showErrorDetails.value = false;
-    retryCount.value = 0;
-  }
-});
+  hasError: () => hasError.value,
+  isLoading: () => isLoading.value
+})
 </script>
 
 <style scoped>
 .error-boundary {
-  @apply min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4;
+  width: 100%;
 }
 
 .error-container {
-  @apply max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.error-icon {
-  @apply flex justify-center mb-4;
+.loading-container {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.error-title {
-  @apply text-xl font-semibold text-gray-900 dark:text-white mb-2;
+.error-boundary-content {
+  width: 100%;
 }
 
-.error-message {
-  @apply text-gray-600 dark:text-gray-300 mb-6;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.error-details {
-  @apply mb-6;
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .error-container {
+    min-height: 16rem;
+    padding: 1rem;
+  }
+  
+  .error-icon svg {
+    width: 3rem;
+    height: 3rem;
+  }
 }
 
-.details-toggle {
-  @apply flex items-center justify-center w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .error-container {
+    border-width: 2px;
+  }
 }
 
-.error-details-content {
-  @apply mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg text-left;
-}
-
-.error-stack {
-  @apply text-xs text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap overflow-auto max-h-40;
-}
-
-.error-actions {
-  @apply flex flex-col sm:flex-row gap-3 justify-center mb-6;
-}
-
-.btn-primary {
-  @apply flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors;
-}
-
-.btn-secondary {
-  @apply px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors;
-}
-
-.error-suggestions {
-  @apply text-left;
-}
-
-.error-suggestions h3 {
-  @apply font-medium text-gray-900 dark:text-white mb-2;
-}
-
-.error-suggestions ul {
-  @apply list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1;
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .error-container,
+  .loading-container {
+    animation: none;
+  }
+  
+  .loading-spinner svg {
+    animation: none;
+  }
 }
 </style>

@@ -149,27 +149,23 @@
         <!-- Primary Content -->
         <div class="flex-1 flex flex-col min-h-0">
           <!-- Loading State -->
-          <div v-if="isLoading" class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p class="text-gray-600 dark:text-gray-400">{{ loadingMessage }}</p>
-            </div>
-          </div>
+          <LoadingState
+            v-if="isLoading"
+            type="kaiju"
+            size="lg"
+            :message="loadingMessage"
+            full-height
+          />
           
           <!-- Error State -->
-          <div v-else-if="error" class="flex-1 flex items-center justify-center">
-            <div class="text-center max-w-md mx-auto px-4">
-              <div class="text-6xl mb-4">😵</div>
-              <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
-              <p class="text-gray-600 dark:text-gray-400 mb-4" data-testid="error-message">{{ error }}</p>
-              <button
-                @click="retryOperation"
-                class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
+          <ErrorBoundary
+            v-else-if="error"
+            :error-title="'Application Error'"
+            :error-message="error"
+            :retry-handler="retryOperation"
+            :show-reload="true"
+            class="flex-1"
+          />
           
           <!-- View Content -->
           <div v-else class="flex-1 flex flex-col min-h-0">
@@ -184,10 +180,16 @@
                     Select a Kaiju monster to battle and improve your coding skills
                   </p>
                 </div>
-                <ChallengeSelector 
-                  @challenge-generated="handleChallengeGenerated" 
-                  @challenge-selected="handleChallengeSelected" 
-                />
+                <ErrorBoundary
+                  error-title="Challenge Selection Error"
+                  error-message="Failed to load challenge selection interface"
+                  :retry-handler="() => $router.go(0)"
+                >
+                  <ChallengeSelector 
+                    @challenge-generated="handleChallengeGenerated" 
+                    @challenge-selected="handleChallengeSelected" 
+                  />
+                </ErrorBoundary>
               </div>
             </div>
             
@@ -285,21 +287,33 @@
               <div class="hidden lg:flex lg:w-96 lg:flex-col lg:border-l lg:border-gray-200 lg:dark:border-gray-700">
                 <!-- AI Chat Panel -->
                 <div class="flex-1 min-h-0">
-                  <AIChatInterface
-                    v-if="currentChallenge && challengeContext"
-                    :challenge-context="challengeContext"
-                    :user-id="userId"
-                  />
+                  <ErrorBoundary
+                    error-title="AI Chat Error"
+                    error-message="Failed to load AI chat interface"
+                    :show-reload="false"
+                  >
+                    <AIChatInterface
+                      v-if="currentChallenge && challengeContext"
+                      :challenge-context="challengeContext"
+                      :user-id="userId"
+                    />
+                  </ErrorBoundary>
                 </div>
                 
                 <!-- Zoom-a-Friend Panel -->
                 <div class="h-80 border-t border-gray-200 dark:border-gray-700">
-                  <ZoomAFriendPanel
-                    v-if="currentChallenge"
-                    :challenge-id="currentChallenge.id"
-                    :current-code="currentCode"
-                    :requirements="currentChallenge.requirements.map(r => r.description)"
-                  />
+                  <ErrorBoundary
+                    error-title="Zoom-a-Friend Error"
+                    error-message="Failed to load team member interface"
+                    :show-reload="false"
+                  >
+                    <ZoomAFriendPanel
+                      v-if="currentChallenge"
+                      :challenge-id="currentChallenge.id"
+                      :current-code="currentCode"
+                      :requirements="currentChallenge.requirements.map(r => r.description)"
+                    />
+                  </ErrorBoundary>
                 </div>
               </div>
             </div>
@@ -315,7 +329,13 @@
                     Track your achievements and improvement over time
                   </p>
                 </div>
-                <ProgressTracker />
+                <ErrorBoundary
+                  error-title="Progress Tracking Error"
+                  error-message="Failed to load progress tracking interface"
+                  :retry-handler="() => $router.go(0)"
+                >
+                  <ProgressTracker />
+                </ErrorBoundary>
               </div>
             </div>
           </div>
@@ -349,11 +369,17 @@
         </button>
       </div>
       <div class="flex-1 min-h-0">
-        <AIChatInterface
-          v-if="currentChallenge && challengeContext"
-          :challenge-context="challengeContext"
-          :user-id="userId"
-        />
+        <ErrorBoundary
+          error-title="AI Chat Error"
+          error-message="Failed to load AI chat interface"
+          :show-reload="false"
+        >
+          <AIChatInterface
+            v-if="currentChallenge && challengeContext"
+            :challenge-context="challengeContext"
+            :user-id="userId"
+          />
+        </ErrorBoundary>
       </div>
     </div>
     
@@ -376,12 +402,18 @@
         </button>
       </div>
       <div class="flex-1 min-h-0 p-4">
-        <ZoomAFriendPanel
-          v-if="currentChallenge"
-          :challenge-id="currentChallenge.id"
-          :current-code="currentCode"
-          :requirements="currentChallenge.requirements.map(r => r.description)"
-        />
+        <ErrorBoundary
+          error-title="Zoom-a-Friend Error"
+          error-message="Failed to load team member interface"
+          :show-reload="false"
+        >
+          <ZoomAFriendPanel
+            v-if="currentChallenge"
+            :challenge-id="currentChallenge.id"
+            :current-code="currentCode"
+            :requirements="currentChallenge.requirements.map(r => r.description)"
+          />
+        </ErrorBoundary>
       </div>
     </div>
     
@@ -431,6 +463,8 @@ import VisualDisplay from '@/components/common/VisualDisplay.vue'
 import AchievementNotification from '@/components/progress/AchievementNotification.vue'
 import BudgetStatus from '@/components/common/BudgetStatus.vue'
 import BudgetManager from '@/components/common/BudgetManager.vue'
+import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
 import type { Challenge, ChallengeContext } from '@/types'
 import type { AIGradingResponse } from '@/types/api'
 import { ProgrammingLanguage } from '@/types'
