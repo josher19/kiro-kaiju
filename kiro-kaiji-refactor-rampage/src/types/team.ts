@@ -7,7 +7,7 @@
 
 export enum TeamRole {
   QA = 'quality-assurance',
-  ARCHITECT = 'architect', 
+  ARCHITECT = 'architect',
   PRODUCT_OWNER = 'product-owner',
   SENIOR_DEVELOPER = 'senior-developer'
 }
@@ -82,7 +82,7 @@ export const TEAM_MEMBERS: Record<TeamRole, TeamMember> = {
     animalSounds: ['puff', 'bubble', 'blub', 'whoosh'],
     keyTerms: ['defects', 'bugs', 'testing', 'quality', 'validation']
   },
-  
+
   [TeamRole.ARCHITECT]: {
     id: 'architect-owl',
     role: TeamRole.ARCHITECT,
@@ -95,12 +95,12 @@ export const TEAM_MEMBERS: Record<TeamRole, TeamMember> = {
     animalSounds: ['hoot', 'hoo', 'screech', 'flutter'],
     keyTerms: ['architecture', 'design', 'patterns', 'structure', 'scalability', 'redundancy']
   },
-  
+
   [TeamRole.PRODUCT_OWNER]: {
     id: 'po-pig',
     role: TeamRole.PRODUCT_OWNER,
     avatar: AnimalAvatar.PIG,
-    name: 'Porky',
+    name: 'Porgy',
     title: 'Product Owner Pig',
     specialties: ['Requirements', 'User Stories', 'Priorities', 'Business Value'],
     personality: ['Business-focused', 'User-centric', 'Practical', 'Results-driven'],
@@ -108,12 +108,12 @@ export const TEAM_MEMBERS: Record<TeamRole, TeamMember> = {
     animalSounds: ['oink', 'snort', 'grunt', 'squeal'],
     keyTerms: ['requirements', 'user story', 'business value', 'priority', 'stakeholder']
   },
-  
+
   [TeamRole.SENIOR_DEVELOPER]: {
     id: 'senior-cat',
     role: TeamRole.SENIOR_DEVELOPER,
     avatar: AnimalAvatar.CAT,
-    name: 'Whiskers',
+    name: 'Kitty',
     title: 'Senior Developer Cat',
     specialties: ['Code Quality', 'Best Practices', 'Refactoring', 'Mentoring'],
     personality: ['Experienced', 'Pragmatic', 'Code-focused', 'Helpful'],
