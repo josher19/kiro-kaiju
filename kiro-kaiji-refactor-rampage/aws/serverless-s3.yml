@@ -8,8 +8,8 @@ plugins:
 provider:
   name: aws
   runtime: nodejs18.x
-  region: us-west-2
-  stage: dev
+  region: ${opt:region, 'us-west-2'}
+  stage: ${opt:stage, 'dev'}
 
 custom:
   bucketName: ${self:service}-${self:provider.stage}
