@@ -120,11 +120,11 @@ export const chatCompletion = async (
       };
     }
 
-    // Add small delay to avoid quota issues
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     // Get response from Bedrock using cost-optimized model
     const response = await bedrockService.chatCompletion(messages, selectedModel, max_tokens);
+
+    // Add small delay to avoid quota issues
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Calculate actual cost and record metrics
     const actualOutputTokens = response.length;

@@ -13,6 +13,8 @@ export interface ZoomAFriendServiceConfig {
   enableSoundEffects?: boolean;
   maxCodeComments?: number;
   aiProvider?: 'kiro' | 'local-llm' | 'openrouter';
+  maxHistoryMessages?: number; // Maximum conversation history messages to send (default: 2)
+  enableHistoryOptimization?: boolean; // Enable conversation history truncation (default: true)
 }
 
 export class ZoomAFriendService {
@@ -23,11 +25,73 @@ export class ZoomAFriendService {
     this.config = {
       enableSoundEffects: config.enableSoundEffects ?? true,
       maxCodeComments: config.maxCodeComments ?? 10,
-      aiProvider: config.aiProvider ?? 'kiro'
+      aiProvider: config.aiProvider ?? 'kiro',
+      maxHistoryMessages: config.maxHistoryMessages ?? 2,
+      enableHistoryOptimization: config.enableHistoryOptimization ?? true
     };
 
     if (this.config.enableSoundEffects) {
       this.initializeSoundEffects();
+    }
+  }
+
+  /**
+   * Send optimized AI request with truncated conversation history to reduce payload size
+   * This addresses the issue of Zoom-A-Friend sending 19,000+ bytes in 8 messages
+   */
+  private async sendOptimizedAIRequest(
+    prompt: string,
+    challengeContext: any,
+    maxHistoryMessages?: number
+  ): Promise<any> {
+    const aiService = getAIService();
+    
+    // Use configuration values if not explicitly provided
+    const historyLimit = maxHistoryMessages ?? this.config.maxHistoryMessages ?? 2;
+    const optimizationEnabled = this.config.enableHistoryOptimization ?? true;
+    
+    // If optimization is disabled, use normal AI service
+    if (!optimizationEnabled) {
+      return await aiService.sendMessage(prompt, challengeContext);
+    }
+    
+    // Store original sendMessage method
+    const originalSendMessage = aiService.sendMessage.bind(aiService);
+    
+    // Create optimized sendMessage that truncates conversation history
+    const optimizedSendMessage = async (message: string, challengeCtx: any, userId?: string) => {
+      const conversationId = `${challengeCtx.challenge.id}-${userId || 'anonymous'}`;
+      const fullHistory = aiService.getConversationHistory(conversationId);
+      
+      // Keep only the last N messages to reduce payload size
+      // This prevents sending 19,000+ bytes and improves performance
+      const truncatedHistory = historyLimit > 0 ? fullHistory.slice(-historyLimit) : [];
+      
+      // Log optimization for debugging
+      if (fullHistory.length > historyLimit) {
+        console.log(`ZoomAFriend: Optimized conversation history from ${fullHistory.length} to ${truncatedHistory.length} messages`);
+      }
+      
+      // Temporarily replace the conversation history
+      const originalHistory = [...fullHistory];
+      (aiService as any).conversationHistory.set(conversationId, truncatedHistory);
+      
+      try {
+        return await originalSendMessage(message, challengeCtx, userId);
+      } finally {
+        // Always restore the full conversation history
+        (aiService as any).conversationHistory.set(conversationId, originalHistory);
+      }
+    };
+
+    // Temporarily override the sendMessage method
+    aiService.sendMessage = optimizedSendMessage;
+
+    try {
+      return await aiService.sendMessage(prompt, challengeContext);
+    } finally {
+      // Always restore the original sendMessage method
+      aiService.sendMessage = originalSendMessage;
     }
   }
 
@@ -39,7 +103,6 @@ export class ZoomAFriendService {
     context: DialogContext
   ): Promise<DialogResponse> {
     try {
-      const aiService = getAIService();
       const prompt = this.buildRoleSpecificPrompt(teamMember, context);
 
       // Create a mock challenge context for AI service
@@ -55,7 +118,9 @@ export class ZoomAFriendService {
         currentCode: context.currentCode
       };
 
-      const aiResponse = await aiService.sendMessage(prompt, challengeContext as any);
+      // Use optimized AI request with truncated conversation history
+      // This reduces payload size from potentially 19,000+ bytes to much smaller size
+      const aiResponse = await this.sendOptimizedAIRequest(prompt, challengeContext);
 
       if (aiResponse.success && aiResponse.message) {
         return this.parseAIResponseToDialog(teamMember, aiResponse.message.content, context);
@@ -78,7 +143,6 @@ export class ZoomAFriendService {
     context: DialogContext
   ): Promise<CodeComment[]> {
     try {
-      const aiService = getAIService();
       const prompt = this.buildCodeCommentPrompt(teamMember, code, context);
 
       const challengeContext = {
@@ -93,7 +157,9 @@ export class ZoomAFriendService {
         currentCode: code
       };
 
-      const aiResponse = await aiService.sendMessage(prompt, challengeContext as any);
+      // Use optimized AI request with no conversation history for code comment generation
+      // This significantly reduces payload size since code comments don't need conversation context
+      const aiResponse = await this.sendOptimizedAIRequest(prompt, challengeContext, 0);
 
       if (aiResponse.success && aiResponse.message) {
         return this.parseAIResponseToCodeComments(aiResponse.message.content, teamMember.role);
@@ -646,7 +712,11 @@ export function createZoomAFriendService(config?: ZoomAFriendServiceConfig): Zoo
 
 export function getZoomAFriendService(): ZoomAFriendService {
   if (!zoomAFriendServiceInstance) {
-    zoomAFriendServiceInstance = new ZoomAFriendService();
+    // Create with default optimization settings to reduce payload size
+    zoomAFriendServiceInstance = new ZoomAFriendService({
+      enableHistoryOptimization: true,
+      maxHistoryMessages: 2 // Limit to last 2 messages to prevent 19,000+ byte payloads
+    });
   }
   return zoomAFriendServiceInstance;
 }

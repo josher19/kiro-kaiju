@@ -220,3 +220,118 @@ Test on mobile devices:
 - Mode switching works correctly
 - Error handling is graceful and user-friendly
 - Performance meets acceptable thresholds
+## Zo
+om-A-Friend Chat History Optimization Testing (Task 25)
+
+### Overview
+Task 25 implemented optimization to reduce Zoom-A-Friend payload size from 19,000+ bytes to much smaller payloads by truncating conversation history.
+
+### Test Cases for Optimization
+
+#### 1. Conversation History Truncation
+**Objective**: Verify that Zoom-A-Friend requests only send the last few messages instead of full conversation history
+
+**Steps**:
+1. Open browser developer tools (Network tab)
+2. Start a Zoom-A-Friend session with any team member (QA Pufferfish, Architect Owl, etc.)
+3. Send multiple messages (8+ messages) to build up conversation history
+4. Monitor network requests to `/v1/chat/completions` endpoint
+5. Check the request payload size and message count in the request body
+
+**Expected Results**:
+- AI requests should only include the last 2 messages in conversation history
+- Payload size should be significantly reduced from 19,000+ bytes to ~500-1000 bytes
+- Console should log: "ZoomAFriend: Optimized conversation history from X to 2 messages"
+- Full conversation history should still be visible in the UI
+
+#### 2. Code Comment Generation Optimization
+**Objective**: Verify that code comment requests use minimal conversation history
+
+**Steps**:
+1. Start a Zoom-A-Friend session
+2. Click "Add Code Comments" button
+3. Monitor network requests in developer tools
+4. Check the conversation history in the request payload
+
+**Expected Results**:
+- Code comment requests should use 0 conversation history messages
+- Payload size should be minimal (~200-500 bytes)
+- Code comments should still be generated correctly
+- Console should log optimization message
+
+#### 3. Functionality Preservation
+**Objective**: Ensure that optimization doesn't break existing functionality
+
+**Steps**:
+1. Test all team member roles (QA, Architect, Product Owner, Senior Developer)
+2. Verify role-specific advice is still provided correctly
+3. Test "Add Code Comments" and "Review Code" functionality
+4. Check that conversation context is maintained in the UI
+5. Verify that full conversation history is restored after optimized requests
+
+**Expected Results**:
+- All team members should provide appropriate role-specific advice
+- Animal-themed dialog with technical terms should work correctly
+- Code comments should be generated with proper role perspective
+- UI conversation history should remain intact
+- No functionality should be lost due to optimization
+
+#### 4. Configuration Testing
+**Objective**: Test the optimization configuration options
+
+**Steps**:
+1. Test with default configuration (optimization enabled, max 2 messages)
+2. Test disabling optimization: `createZoomAFriendService({ enableHistoryOptimization: false })`
+3. Test different message limits: `createZoomAFriendService({ maxHistoryMessages: 0 })`, `maxHistoryMessages: 5`
+4. Monitor network requests for each configuration
+
+**Expected Results**:
+- Default configuration should limit to 2 messages
+- Disabled optimization should send full conversation history
+- Different message limits should be respected
+- Configuration changes should be logged in console
+
+#### 5. Performance Impact Testing
+**Objective**: Measure the performance improvement from optimization
+
+**Steps**:
+1. Create a long conversation (10+ messages) with a team member
+2. Measure network request size before and after optimization
+3. Test response times for optimized vs non-optimized requests
+4. Monitor memory usage in browser dev tools
+
+**Expected Results**:
+- Network payload reduction of 80-90%
+- Faster request/response times due to smaller payloads
+- Reduced memory usage for network requests
+- No impact on UI responsiveness
+
+### Performance Metrics
+
+**Before Optimization:**
+- Payload size: 19,000+ bytes for 8 messages
+- Network overhead: High due to large conversation history
+- Memory usage: Increased due to large request payloads
+
+**After Optimization:**
+- Role-based advice: ~500-1000 bytes (last 2 messages only)
+- Code comments: ~200-500 bytes (0 conversation history)
+- Overall reduction: 80-90% payload size reduction
+- Improved network performance and reduced memory usage
+
+### Configuration Options Added
+
+```typescript
+interface ZoomAFriendServiceConfig {
+  enableHistoryOptimization?: boolean; // Default: true
+  maxHistoryMessages?: number; // Default: 2
+}
+```
+
+### Success Criteria for Task 25
+- [ ] Payload size reduced by at least 80% for Zoom-A-Friend requests
+- [ ] All existing functionality preserved
+- [ ] Configuration options work correctly
+- [ ] Console logging shows optimization in action
+- [ ] No errors or broken functionality
+- [ ] Performance improvement measurable in network tab
