@@ -118,7 +118,7 @@
             </button>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {{ deploymentMode === 'local' ? 'Kiro IDE Integration' : 'AWS Cloud Services' }}
+            {{ deploymentMode === 'local' ? 'Local LM Studio' : 'AWS Cloud Services' }}
           </div>
         </div>
 

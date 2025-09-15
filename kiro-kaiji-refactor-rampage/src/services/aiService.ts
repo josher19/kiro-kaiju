@@ -116,7 +116,9 @@ export class AIService {
 
           switch (provider) {
             case 'kiro':
-              response = await this.sendToKiroAI(request, challengeContext);
+              //// Use local llm instead 
+              // response = await this.sendToKiroAI(request, challengeContext);
+              response = await this.sendToLocalLLM(request, challengeContext);
               break;
             case 'local-llm':
               response = await this.sendToLocalLLM(request, challengeContext);
@@ -929,6 +931,7 @@ export function createLocalLLMAIService(endpoint?: string, model?: string): AISe
     }
   };
 
+  console.info('Using Local LLM');
   return createAIService(config);
 }
 
