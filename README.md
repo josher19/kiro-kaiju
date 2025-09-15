@@ -1,6 +1,12 @@
-# Kiro Kaiji
+# Kiro Kaiju
 
-The Yellow/Crossroads Monster
+The Yellow/Crossroads Monster.
+
+[![Kiro Kaiju](./kiro-kaiji-refactor-rampage/public/src/assets/images/team/host_sm.png "Kiro Kaiju: Refactor Rampage")](./kiro-kaiji-refactor-rampage/public/src/assets/images/team/host.png)
+
+He's on a rampage to refactor bad code created by Complexosaur, HydraBug, and other Coding Kaiju.
+
+**[Play!](https://kaiju-refactor-rampage-site-prod.s3.us-west-2.amazonaws.com/index.html)**
 
 ## Running locally
 
@@ -73,4 +79,12 @@ If you make any changes to the Front-End code, you'll need to push those:
 endpoints:
   POST - https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev/api/challenges/generate
   ...
+
+### AWS Bedrock
+
+You will need to enable the Models inside Bedrock before you can use AI.
+
+- "anthropic.claude-3-haiku-20240307-v1"
+- "amazon.titan-text-lite-v1"
+etc.
 
