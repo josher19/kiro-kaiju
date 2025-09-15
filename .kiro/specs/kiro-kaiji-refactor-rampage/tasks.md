@@ -34,7 +34,7 @@
   - Write component tests for user interactions and multi-challenge support
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [x] 5. Integrate Monaco Code Editor
+- [ ] 5. Integrate Monaco Code Editor
   - Install and configure Monaco Editor for Vue 3
   - Create CodeEditor Vue component with syntax highlighting
   - Implement theme switching (light/dark) functionality
@@ -201,7 +201,7 @@
   - Write tests for error scenarios and offline functionality
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [x] 20. Implement Visual Display System
+- [ ] 20. Implement Visual Display System
   - Create visual display component positioned in left sidebar between Progress link and Deployment Mode chooser
   - Implement Kaiju image display when challenge is first selected (from src/assets/images/kaiju/)
   - Implement team member image display when Zoom-a-Friend is clicked (from src/assets/images/team/${TeamRole}_sm.png)
@@ -225,7 +225,7 @@
   - Write tests for markdown rendering, HTML sanitization, and security measures
   - _Requirements: 3.7, 4.7_
 
-- [ ] 22. Optimize Performance and Accessibility
+- [x] 22. Optimize Performance and Accessibility
   - Implement code splitting and lazy loading for components
   - Add service worker for offline functionality and caching
   - Optimize Monaco Editor performance for large code files
@@ -243,7 +243,7 @@
   - Add cross-browser compatibility testing
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 5.1, 5.2, 5.3, 5.4, 5.5, 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [x] 23. Use AWS Cloud Mode Services by default
+- [x] 24. Use AWS Cloud Mode Services by default
   - AWS backend services have been deployed to: https://wz1g0oat52.execute-api.us-west-2.amazonaws.com/dev
   - aiService.ts needs to updated to have an AWS service as well
   - Default should be AWS instead of Kiro
@@ -252,3 +252,25 @@
   - Do not write unit tests yet. You can write a test_plan.md file for manual testing. Any existing tests which fail should be skipped (it.skip or test.skip) for now.
   - Try to minimize the amount of code updated. Write new code similar to existing code. AWS Service routes in aws/servleress.yml are similar to OpenRouter but requires a different Authentication header on each login
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 7.1, 7.2, 7.3_
+
+- [x] 25. Optimize Zoom-A-Friend Chat History
+  - Zoom-A-Friend is currently sending more than 19,000 bytes in 8 messages
+  - Instead of sending all the messages, you can just send the last message or last few messages
+  - Implement message truncation to reduce payload size and improve performance
+  - Chat History should be truncated when a Challenge is completed
+  - The System Prompt should be shorter for Zoom-A-Friend than it is for Grading
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+
+- [ ] 26. Fix Monaco Editor Integration
+  - Monaco Editor is installed in package.json but not properly integrated into CodeEditor component
+  - Implement proper Monaco Editor setup with syntax highlighting for multiple languages
+  - Add theme switching (light/dark) functionality
+  - Configure mobile-responsive controls and touch optimization
+  - Add language support for all supported programming languages
+  - _Requirements: 6.1, 6.2, 6.3_
+
+- [x] 27. Complete Missing Core Components
+  - Implement KaijuDisplay component in src/components/kaiju/ directory (currently empty)
+  - Clicking on the Kaiju or Team Member will show the full 1024x1024 image (same image without "_sm" or "_small" in the name, for example "developer.png" instead of "developer_sm.png") than can be dismissed by clicking (or touching) anywhere on the page
+  - Add proper error boundaries and loading states throughout the application
+  - _Requirements: 1.4, 2.1, 2.2, 2.3, 2.4, 2.5_

@@ -327,13 +327,15 @@ interface VisualDisplayComponent {
 
 interface KaijuDisplay {
   showKaijuImage: (kaijuType: KaijuType) => void;
-  kaijuImagePath: string; // From src/assets/images/kaiju/ directory
+  kaijuImagePath: string; // From assets/images/kaiju/ directory
+  kaijuFullImagePath: string; // kaijuImagePath w/o _small
   displayOnChallengeSelection: boolean; // Show Kaiju image when challenge is first selected
 }
 
 interface TeamMemberDisplay {
   showTeamMemberImage: (teamRole: TeamRole) => void;
-  teamMemberImagePath: string; // From src/assets/images/team/${TeamRole}_sm.png
+  teamMemberImagePath: string; // From assets/images/team/${TeamRole}_sm.png in public
+  teamMemberFullImagePath: string; // teamMemberImagePath w/o "_sm"
   displayOnZoomAFriendClick: boolean; // Show team member image when Zoom-a-Friend is clicked
   replaceKaijuImage: boolean; // Replace Kaiju image with team member image
 }
