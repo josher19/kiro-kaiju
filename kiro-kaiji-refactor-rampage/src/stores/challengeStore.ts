@@ -152,6 +152,10 @@ export const useChallengeStore = defineStore('challenge', () => {
     if (index !== -1) {
       activeChallenges.value.splice(index, 1);
       
+      // Clear Zoom-A-Friend chat history when challenge is completed/removed
+      // This prevents accumulation of large conversation histories
+      clearChallengeHistory(challengeId);
+      
       // If we removed the current challenge, set a new one or null
       if (currentChallenge.value?.id === challengeId) {
         currentChallenge.value = activeChallenges.value.length > 0 
@@ -161,7 +165,30 @@ export const useChallengeStore = defineStore('challenge', () => {
     }
   };
 
-  const clearAllChallenges = () => {
+  const clearChallengeHistory = async (challengeId: string) => {
+    try {
+      // Clear Zoom-A-Friend conversation history to prevent payload bloat
+      const { getZoomAFriendService } = await import('@/services/zoomAFriendService');
+      const zoomService = getZoomAFriendService();
+      zoomService.clearChallengeHistory(challengeId);
+      
+      // Also clear AI service history
+      const { getAIService } = await import('@/services/aiService');
+      const aiService = getAIService();
+      aiService.clearConversationHistory(challengeId);
+      
+      console.log(`Cleared conversation history for challenge ${challengeId}`);
+    } catch (error) {
+      console.warn('Failed to clear challenge history:', error);
+    }
+  };
+
+  const clearAllChallenges = async () => {
+    // Clear conversation history for all active challenges
+    for (const challenge of activeChallenges.value) {
+      await clearChallengeHistory(challenge.id);
+    }
+    
     activeChallenges.value = [];
     currentChallenge.value = null;
   };
@@ -188,6 +215,7 @@ export const useChallengeStore = defineStore('challenge', () => {
     generateChallenge,
     setCurrentChallenge,
     removeChallenge,
-    clearAllChallenges
+    clearAllChallenges,
+    clearChallengeHistory
   };
 });

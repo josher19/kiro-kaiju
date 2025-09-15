@@ -13,8 +13,9 @@ export interface ZoomAFriendServiceConfig {
   enableSoundEffects?: boolean;
   maxCodeComments?: number;
   aiProvider?: 'kiro' | 'local-llm' | 'openrouter';
-  maxHistoryMessages?: number; // Maximum conversation history messages to send (default: 2)
+  maxHistoryMessages?: number; // Maximum conversation history messages to send (default: 1)
   enableHistoryOptimization?: boolean; // Enable conversation history truncation (default: true)
+  useShortSystemPrompt?: boolean; // Use shorter system prompt for Zoom-A-Friend (default: true)
 }
 
 export class ZoomAFriendService {
@@ -26,8 +27,9 @@ export class ZoomAFriendService {
       enableSoundEffects: config.enableSoundEffects ?? true,
       maxCodeComments: config.maxCodeComments ?? 10,
       aiProvider: config.aiProvider ?? 'kiro',
-      maxHistoryMessages: config.maxHistoryMessages ?? 2,
-      enableHistoryOptimization: config.enableHistoryOptimization ?? true
+      maxHistoryMessages: config.maxHistoryMessages ?? 1, // Reduced from 2 to 1 to minimize payload
+      enableHistoryOptimization: config.enableHistoryOptimization ?? true,
+      useShortSystemPrompt: config.useShortSystemPrompt ?? true
     };
 
     if (this.config.enableSoundEffects) {
@@ -47,7 +49,7 @@ export class ZoomAFriendService {
     const aiService = getAIService();
     
     // Use configuration values if not explicitly provided
-    const historyLimit = maxHistoryMessages ?? this.config.maxHistoryMessages ?? 2;
+    const historyLimit = maxHistoryMessages ?? this.config.maxHistoryMessages ?? 1;
     const optimizationEnabled = this.config.enableHistoryOptimization ?? true;
     
     // If optimization is disabled, use normal AI service
@@ -69,7 +71,7 @@ export class ZoomAFriendService {
       
       // Log optimization for debugging
       if (fullHistory.length > historyLimit) {
-        console.log(`ZoomAFriend: Optimized conversation history from ${fullHistory.length} to ${truncatedHistory.length} messages`);
+        console.log(`ZoomAFriend: Optimized conversation history from ${fullHistory.length} to ${truncatedHistory.length} messages (saved ~${Math.round((fullHistory.length - truncatedHistory.length) * 2400)} bytes)`);
       }
       
       // Temporarily replace the conversation history
@@ -93,6 +95,16 @@ export class ZoomAFriendService {
       // Always restore the original sendMessage method
       aiService.sendMessage = originalSendMessage;
     }
+  }
+
+  /**
+   * Clear conversation history for Zoom-A-Friend when challenge is completed
+   * This prevents accumulation of large conversation histories
+   */
+  clearChallengeHistory(challengeId: string, userId?: string): void {
+    const aiService = getAIService();
+    aiService.clearConversationHistory(challengeId, userId);
+    console.log(`ZoomAFriend: Cleared conversation history for challenge ${challengeId}`);
   }
 
   /**
@@ -226,12 +238,30 @@ export class ZoomAFriendService {
 
   /**
    * Build role-specific prompt for AI dialog generation
+   * Uses shorter system prompt to reduce payload size compared to grading prompts
    */
   private buildRoleSpecificPrompt(teamMember: TeamMember, context: DialogContext): string {
-    const roleInstructions = this.getRoleInstructions(teamMember.role);
-    const animalPersonality = this.getAnimalPersonality(teamMember);
+    const useShortPrompt = this.config.useShortSystemPrompt ?? true;
+    
+    if (useShortPrompt) {
+      // Shorter system prompt to reduce payload size for Zoom-A-Friend
+      const roleInstructions = this.getRoleInstructions(teamMember.role);
+      
+      return `You are ${teamMember.name}, a ${teamMember.title}. ${roleInstructions}
 
-    return `You are ${teamMember.name}, a ${teamMember.title} in a coding team. ${roleInstructions}
+Character: ${teamMember.avatar} - use sounds: ${teamMember.animalSounds.slice(0, 3).join(', ')}
+Focus: ${teamMember.keyTerms.slice(0, 3).join(', ')}
+
+Question: "${context.userQuestion}"
+Code: ${context.currentCode.slice(0, 500)}${context.currentCode.length > 500 ? '...' : ''}
+
+Give brief, role-specific advice with animal sounds. Keep response under 200 words.`;
+    } else {
+      // Full system prompt (original version)
+      const roleInstructions = this.getRoleInstructions(teamMember.role);
+      const animalPersonality = this.getAnimalPersonality(teamMember);
+
+      return `You are ${teamMember.name}, a ${teamMember.title} in a coding team. ${roleInstructions}
 
 IMPORTANT: You must respond in character as ${teamMember.avatar} with the following personality:
 - Use animal sounds from this list frequently: ${teamMember.animalSounds.join(', ')}
@@ -258,15 +288,35 @@ Respond with advice that includes:
 4. Practical, actionable suggestions
 
 Keep your response conversational but professional, and stay in character as a ${teamMember.avatar}!`;
+    }
   }
 
   /**
    * Build prompt for AI code comment generation
+   * Uses shorter prompt to reduce payload size
    */
   private buildCodeCommentPrompt(teamMember: TeamMember, code: string, context: DialogContext): string {
-    const roleInstructions = this.getRoleInstructions(teamMember.role);
+    const useShortPrompt = this.config.useShortSystemPrompt ?? true;
+    
+    if (useShortPrompt) {
+      // Shorter prompt for code comments to reduce payload size
+      const roleInstructions = this.getRoleInstructions(teamMember.role);
+      
+      return `${teamMember.name} (${teamMember.title}): ${roleInstructions}
 
-    return `You are ${teamMember.name}, a ${teamMember.title}. ${roleInstructions}
+JSON format: {"comments": [{"lineNumber": 1, "comment": "text", "type": "suggestion|warning|info|improvement"}]}
+
+Code (first 800 chars):
+\`\`\`
+${code.slice(0, 800)}${code.length > 800 ? '...' : ''}
+\`\`\`
+
+Provide max 3 comments from your role's perspective.`;
+    } else {
+      // Full prompt (original version)
+      const roleInstructions = this.getRoleInstructions(teamMember.role);
+
+      return `You are ${teamMember.name}, a ${teamMember.title}. ${roleInstructions}
 
 Please analyze this code and provide role-specific comments. Return your response in this exact JSON format:
 {
@@ -289,6 +339,7 @@ ${code}
 
 Provide ${Math.min(this.config.maxCodeComments!, 5)} most important comments from your role's perspective.
 Make comments concise but actionable. Include line numbers where issues or improvements are needed.`;
+    }
   }
 
   /**
@@ -414,7 +465,7 @@ Make comments concise but actionable. Include line numbers where issues or impro
     const comments: CodeComment[] = [];
     const lines = content.split('\n');
 
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       // Look for line number references
       const lineMatch = line.match(/line\s*(\d+)/i);
       if (lineMatch) {
@@ -450,7 +501,7 @@ Make comments concise but actionable. Include line numbers where issues or impro
   /**
    * Generate fallback response when AI is not available
    */
-  private generateFallbackResponse(teamMember: TeamMember, context: DialogContext): DialogResponse {
+  private generateFallbackResponse(teamMember: TeamMember, _context: DialogContext): DialogResponse {
     const responses = this.getFallbackResponses(teamMember.role);
     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
 
@@ -712,10 +763,12 @@ export function createZoomAFriendService(config?: ZoomAFriendServiceConfig): Zoo
 
 export function getZoomAFriendService(): ZoomAFriendService {
   if (!zoomAFriendServiceInstance) {
-    // Create with default optimization settings to reduce payload size
+    // Create with optimized settings to reduce payload size from 19,000+ bytes
     zoomAFriendServiceInstance = new ZoomAFriendService({
       enableHistoryOptimization: true,
-      maxHistoryMessages: 2 // Limit to last 2 messages to prevent 19,000+ byte payloads
+      maxHistoryMessages: 1, // Reduced to 1 message to minimize payload size
+      useShortSystemPrompt: true, // Use shorter system prompts
+      maxCodeComments: 3 // Limit code comments to reduce response size
     });
   }
   return zoomAFriendServiceInstance;

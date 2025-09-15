@@ -262,6 +262,11 @@ const endSession = () => {
   if (activeSession.value) {
     activeSession.value.isActive = false
     emit('session-ended', activeSession.value)
+    
+    // Clear conversation history to prevent payload bloat
+    const zoomService = getZoomAFriendService()
+    zoomService.clearChallengeHistory(props.challengeId)
+    
     activeSession.value = null
     
     // Clear selected team member from visual display
@@ -444,6 +449,24 @@ const generateDialogResponse = async (member: TeamMember, context: DialogContext
   }
 }
 
+const onChallengeCompleted = () => {
+  // Clear conversation history when challenge is completed to prevent payload bloat
+  const zoomService = getZoomAFriendService()
+  zoomService.clearChallengeHistory(props.challengeId)
+  
+  // End current session if active
+  if (activeSession.value) {
+    endSession()
+  }
+  
+  console.log(`ZoomAFriend: Cleared history for completed challenge ${props.challengeId}`)
+}
+
+// Expose method for parent components to call when challenge is completed
+defineExpose({
+  onChallengeCompleted
+})
+
 const generateRoleSpecificResponse = (member: TeamMember, context: DialogContext) => {
   const question = context.userQuestion.toLowerCase()
   
@@ -461,7 +484,7 @@ const generateRoleSpecificResponse = (member: TeamMember, context: DialogContext
   }
 }
 
-const generateQAResponse = (question: string, context: DialogContext) => {
+const generateQAResponse = (question: string, _context: DialogContext) => {
   if (question.includes('bug') || question.includes('test') || question.includes('error')) {
     return [
       {
@@ -492,7 +515,7 @@ const generateQAResponse = (question: string, context: DialogContext) => {
   ]
 }
 
-const generateArchitectResponse = (question: string, context: DialogContext) => {
+const generateArchitectResponse = (question: string, _context: DialogContext) => {
   if (question.includes('design') || question.includes('structure') || question.includes('pattern')) {
     return [
       {
@@ -523,7 +546,7 @@ const generateArchitectResponse = (question: string, context: DialogContext) => 
   ]
 }
 
-const generatePOResponse = (question: string, context: DialogContext) => {
+const generatePOResponse = (question: string, _context: DialogContext) => {
   if (question.includes('requirement') || question.includes('user') || question.includes('feature')) {
     return [
       {
@@ -554,7 +577,7 @@ const generatePOResponse = (question: string, context: DialogContext) => {
   ]
 }
 
-const generateSeniorDevResponse = (question: string, context: DialogContext) => {
+const generateSeniorDevResponse = (question: string, _context: DialogContext) => {
   if (question.includes('refactor') || question.includes('clean') || question.includes('code')) {
     return [
       {
